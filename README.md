@@ -1,3 +1,7 @@
+> ### Get a free beta API key
+>
+> Join the V-Modal beta by [filling out the contact form](https://v-modal.com/page/contact.ts).
+
 <div align="center">
 
 <img src="assets/vmodal-banner.svg" alt="V-Modal Android SDK" width="760"/>
