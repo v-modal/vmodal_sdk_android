@@ -17,6 +17,7 @@ No video-processing stack, no vector database — just a client, a token, and co
 [Search](#-search-a-collection) •
 [Upload](#-upload-a-video) •
 [Examples](examples/01_starter/) •
+[Search app](docs/search_app.md) •
 [API reference](DOC_REF.md) •
 [Troubleshooting](#-troubleshooting)
 
