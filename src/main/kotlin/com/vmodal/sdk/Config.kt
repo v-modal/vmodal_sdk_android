@@ -12,6 +12,7 @@ data class SdkConfig(
     val timeoutMillis: Int = 30_000,
     val mode: String = "direct",
     val maxRetries: Int = 1,
+    val apiKeyProvider: ApiKeyProvider? = null,
 ) {
     val normalizedMode: String = mode.trim().lowercase().ifBlank { "direct" }
     val normalizedBaseUrl: String = strGatewayBaseUrl(baseUrl, normalizedMode)
@@ -20,6 +21,24 @@ data class SdkConfig(
     val normalizedEmail: String = email.trim()
     val normalizedToken: String = token.trim()
     val normalizedMaxRetries: Int = maxOf(0, maxRetries)
+
+    internal fun currentApiKey(): String {
+        val key = apiKeyProvider?.current() ?: normalizedToken
+        return if (key.isBlank()) "" else strApiKey(key)
+    }
+
+    override fun toString(): String = buildString {
+        append("SdkConfig(baseUrl=").append(baseUrl)
+        append(", userId=").append(userId)
+        append(", tenantId=").append(tenantId)
+        append(", email=").append(email)
+        append(", token=[REDACTED]")
+        append(", timeoutMillis=").append(timeoutMillis)
+        append(", mode=").append(mode)
+        append(", maxRetries=").append(maxRetries)
+        append(", apiKeyProvider=").append(if (apiKeyProvider == null) "null" else "[configured]")
+        append(')')
+    }
 
     companion object {
         fun fromEnv(

@@ -5,7 +5,7 @@
 <br/><br/>
 
 **Search video with plain text from your Kotlin Android app.**
-No video-processing stack, no vector database — just a client, a token, and coroutines.
+No video-processing stack, no vector database — just a client, an API key, and coroutines.
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-100%25-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Android](https://img.shields.io/badge/Android-SDK-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
@@ -14,6 +14,7 @@ No video-processing stack, no vector database — just a client, a token, and co
 [![Website](https://img.shields.io/badge/v--modal.com-visit-2EC5FF)](https://v-modal.com)
 
 [Quick start](#-quick-start) •
+[Runtime API keys](#-runtime-api-key-contract) •
 [Search](#-search-a-collection) •
 [Upload](#-upload-a-video) •
 [Examples](examples/01_starter/) •
@@ -51,9 +52,10 @@ files with resumable multipart streaming, and plays nicely with
 | <img src="assets/kotlin-original.svg" width="16"/> Kotlin project | Android project using Gradle Kotlin DSL |
 | ☕ Java 17 | `sourceCompatibility` / `jvmTarget = "17"` |
 | 📦 This repository | Checked out next to, or inside, your Android project |
-| 🔑 API token | From your application's approved sign-in flow |
+| 🔑 API key | Loaded at runtime from your authenticated application backend |
 
-> ⚠️ Do not put a real token in source control. Pass it to the client at runtime.
+> ⚠️ Never bundle a real API key in source, `BuildConfig`, resources, or
+> `AndroidManifest.xml`. The parent application must inject it at runtime.
 
 ## 🚀 Quick start
 
@@ -115,20 +117,25 @@ Sync the Gradle project, then allow network access in
 V-Modal calls perform network I/O. Run them from `Dispatchers.IO`, WorkManager,
 or another worker thread — never the Android main thread.
 
-The following function authenticates the token, creates the ready-to-use
+The following function authenticates the API key, creates the ready-to-use
 client, and returns the first visible result:
 
 ```kotlin
 import com.vmodal.sdk.Client
+import com.vmodal.sdk.MutableApiKeyProvider
 import com.vmodal.sdk.PUBLIC_GATEWAY_URL
+import com.vmodal.sdk.SdkConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-suspend fun checkVmodal(apiToken: String): Client = withContext(Dispatchers.IO) {
+suspend fun checkVmodal(apiKeys: MutableApiKeyProvider): Client = withContext(Dispatchers.IO) {
     val firstClient = Client(
-        baseUrl = PUBLIC_GATEWAY_URL,
-        token = apiToken,
-        mode = "gateway",
+        SdkConfig(
+            baseUrl = PUBLIC_GATEWAY_URL,
+            userId = "",
+            mode = "gateway",
+            apiKeyProvider = apiKeys,
+        )
     )
     val me = firstClient.auth.me()
 
@@ -153,8 +160,11 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
 lifecycleScope.launch {
-    val sdk = checkVmodal(apiToken)
+    val apiKeys = MutableApiKeyProvider(apiKeyLoadedByYourApp)
+    val sdk = checkVmodal(apiKeys)
     // Keep or pass sdk to the code that needs V-Modal.
+    // Retain apiKeys at application scope, then call apiKeys.rotate(freshKey).
+    // On logout/account switch: clear persisted state, then apiKeys.clear().
 }
 ```
 
@@ -166,11 +176,84 @@ authentication, and network access are all working. 🎉
 
 ```mermaid
 flowchart LR
-    A["🔑 API token"] --> B["Client(mode = gateway)"]
-    B --> C["auth.me()"]
-    C --> D["Client(cfg + userId)"]
-    D --> E["health() / search / upload"]
+    A["🔑 Runtime API key"] --> B["MutableApiKeyProvider"]
+    B --> C["Client(mode = gateway)"]
+    C --> D["auth.me()"]
+    D --> E["Client(cfg + userId)"]
+    E --> F["health() / search / upload"]
 ```
+
+## 🔄 Runtime API-key contract
+
+The parent Android application and this SDK have separate responsibilities.
+The app owns the credential lifecycle; the SDK only reads the injected current
+value while building an authenticated request.
+
+| Parent application owns | SDK owns |
+|---|---|
+| Authenticate the signed-in app user | `ApiKeyProvider` request-time contract |
+| Fetch the API key from the app backend | Atomic swaps and fail-closed clearing in `MutableApiKeyProvider` |
+| Choose secure, app-owned persistence | One key snapshot per authenticated request |
+| Refresh, version, and serialize rotations | `Authorization: Bearer <key>` on existing authenticated routes |
+| Decide whether a failed operation is safe to retry | Filtering auth headers from presigned R2 upload requests |
+
+`ApiKeyProvider.current()` is synchronous. It must return an already-loaded
+value and must not perform storage or network I/O. Keep the provider and
+`Client` at application scope so Activities, coroutines, and WorkManager jobs
+all observe the same rotations.
+
+```mermaid
+flowchart LR
+    subgraph App["Parent Android application"]
+        A["App-owned secure storage"] --> B["Load cached key on worker thread"]
+        C["Authenticated app backend"] --> D["Fetch latest key"]
+        B --> E["MutableApiKeyProvider"]
+        D -->|"persist, then rotate(newKey)"| E
+    end
+    subgraph SDK["uinterface/sdk_android"]
+        F["SdkConfig(apiKeyProvider)"] --> G["Client"]
+        G --> H["Build authenticated request"]
+        H --> I["Authorization: Bearer key snapshot"]
+    end
+    E --> F
+```
+
+At application startup:
+
+1. On `Dispatchers.IO`, load the signed-in session and cached API key from
+   app-owned storage. If no key exists, complete sign-in and fetch the first key
+   before creating an authenticated client.
+2. Create one `MutableApiKeyProvider`, inject it through `SdkConfig`, call
+   `auth.me()`, and install the resolved `Client` in the app dependency graph.
+3. Fetch a newer key in the background. Validate and persist it using the
+   app's policy, then call `rotate(newKey)`.
+
+Rotation changes the next request; a request already created keeps its original
+header. A blank initial or rotated key raises `ValidationFailed`, and a failed
+rotation leaves the last working key active. Rotation is only valid for another
+key belonging to the same V-Modal identity. For a different user or tenant,
+create a new `Client` and resolve `auth.me()` again.
+
+On logout or account switch, first stop/cancel work that uses the client, clear
+the app's persisted credential, and call `apiKeys.clear()` (or `close()`). The
+operation is idempotent. Later authenticated requests fail closed with
+`AuthError`; a configured provider never falls back to the legacy static token.
+Clearing removes the SDK's live reference, but immutable JVM strings cannot be
+guaranteed to be zeroized from every old heap copy.
+
+Authenticated API calls require HTTPS except for literal loopback development
+hosts, reject cross-origin absolute URLs, and do not follow redirects. Signed
+uploads apply the same HTTPS policy, strip API identity headers, and do not
+follow redirects.
+
+On `401`, the app may refresh the key and retry one safe, idempotent operation
+once. Do not treat `403` as proof of expiration, and do not automatically replay
+uploads or mutating `POST` requests. See the framework-free
+[rotation example](examples/01_starter/03_rotate_api_key.kt).
+
+The legacy `token = "..."` constructors and `SdkConfig.fromEnv()` remain
+supported for JVM tools, CI, and existing integrations. `apiKeyProvider` takes
+precedence when both are supplied.
 
 ## 📁 List your collections
 
@@ -232,8 +315,8 @@ of at least 100 MiB use multipart upload by default.
 
 | Symptom | Fix |
 |---|---|
-| `VMODAL_API_KEY is required` | `Client.fromEnv()` is intended for JVM tools and CI, where environment variables exist. In an Android app, pass the runtime token as shown in the quick start. |
-| `auth/me returned no user_id` or auth error | Confirm the token is current and belongs to the environment identified by `PUBLIC_GATEWAY_URL`. Do not invent or hard-code a user ID; `auth.me()` resolves the token owner. |
+| `VMODAL_API_KEY is required` | `Client.fromEnv()` is intended for JVM tools and CI, where environment variables exist. In an Android app, inject a runtime API-key provider as shown in the quick start. |
+| `auth/me returned no user_id` or auth error | Confirm the API key is current and belongs to the environment identified by `PUBLIC_GATEWAY_URL`. Do not invent or hard-code a user ID; `auth.me()` resolves the key owner. |
 | `NetworkOnMainThreadException` or frozen UI | Move blocking calls (`auth.me()`, `health()`, `listGroups()`, `searchVideo()`) to `Dispatchers.IO` or WorkManager. `videoUploadAsync()` already runs off the main thread, but its callbacks do too — switch to `Dispatchers.Main` before updating views. |
 | Gradle cannot find the SDK project | Check the path in `settings.gradle.kts`. It must point to this exact directory: `uinterface/sdk_android`. |
 

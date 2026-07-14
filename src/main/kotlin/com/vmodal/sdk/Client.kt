@@ -29,9 +29,12 @@ class Client(
         maxRetries: Int = 1,
         transport: VmodalTransport? = null,
         signedUploads: SignedUploadTransport? = null,
+        apiKeyProvider: ApiKeyProvider? = null,
     ) : this(
-        SdkConfig(baseUrl, userId, tenantId, email, token, timeoutMillis, mode, maxRetries),
-        transport ?: HttpUrlConnectionTransport(SdkConfig(baseUrl, userId, tenantId, email, token, timeoutMillis, mode, maxRetries)),
+        SdkConfig(baseUrl, userId, tenantId, email, token, timeoutMillis, mode, maxRetries, apiKeyProvider),
+        transport ?: HttpUrlConnectionTransport(
+            SdkConfig(baseUrl, userId, tenantId, email, token, timeoutMillis, mode, maxRetries, apiKeyProvider)
+        ),
         signedUploads ?: OkHttpSignedUploadTransport(timeoutMillis.toLong()),
     )
 
@@ -50,7 +53,7 @@ class Client(
             val uploads = signedUploads ?: OkHttpSignedUploadTransport(cfg.timeoutMillis.toLong())
             val client = Client(cfg, net, uploads)
             if (!resolveIdentity || cfg.normalizedUserId.isNotBlank()) return client
-            // Gateway requests need the token owner fields for parity with Python SdkConfig.from_env.
+            // Gateway requests need the API-key owner fields for parity with Python SdkConfig.from_env.
             // Resolve them once via users_api; no identity values are accepted from the app blindly.
             val me = client.auth.me()
             val resolved = cfg.copy(userId = me.userId.orEmpty(), tenantId = me.tenantId.orEmpty(), email = me.email.orEmpty())

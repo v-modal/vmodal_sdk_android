@@ -30,7 +30,18 @@ data class VmodalRequest(
     val jsonBody: Any? = null,
     val formFields: Map<String, Any?> = emptyMap(),
     val files: List<VmodalFilePart> = emptyList(),
-)
+) {
+    override fun toString(): String = buildString {
+        append("VmodalRequest(method=").append(method)
+        append(", pathType=").append(if (strIsAbsoluteHttpUrl(path)) "absolute" else "relative")
+        append(", queryParameterKeys=").append(queryParameters.keys)
+        append(", headerNames=").append(headers.keys)
+        append(", hasJsonBody=").append(jsonBody != null)
+        append(", formFieldNames=").append(formFields.keys)
+        append(", fileCount=").append(files.size)
+        append(')')
+    }
+}
 
 data class VmodalResponse(
     val statusCode: Int,
@@ -42,6 +53,9 @@ data class VmodalResponse(
 
     @Suppress("UNCHECKED_CAST")
     fun jsonObject(): Map<String, Any?> = json as? Map<String, Any?> ?: emptyMap()
+
+    override fun toString(): String =
+        "VmodalResponse(statusCode=$statusCode, headerNames=${headers.keys}, bodyBytes=${bytes.size})"
 }
 
 interface VmodalTransport {
@@ -50,10 +64,11 @@ interface VmodalTransport {
 
 class HttpUrlConnectionTransport(private val cfg: SdkConfig) : VmodalTransport {
     override fun execute(request: VmodalRequest): VmodalResponse {
-        val base = if (request.path.startsWith("http://") || request.path.startsWith("https://")) "" else cfg.normalizedBaseUrl
-        val url = URL(base + request.path + request.queryParameters.toQueryString())
+        val base = if (strIsAbsoluteHttpUrl(request.path)) "" else cfg.normalizedBaseUrl
+        val url = validatedHttpUrl(base + request.path + request.queryParameters.toQueryString())
         val boundary = "----vmodal-${System.currentTimeMillis()}"
         val conn = (url.openConnection() as HttpURLConnection).apply {
+            instanceFollowRedirects = false
             requestMethod = request.method.uppercase()
             connectTimeout = cfg.timeoutMillis
             readTimeout = cfg.timeoutMillis
@@ -83,6 +98,43 @@ class HttpUrlConnectionTransport(private val cfg: SdkConfig) : VmodalTransport {
         return VmodalResponse(status, bytes.toString(StandardCharsets.UTF_8), headers, bytes)
     }
 }
+
+internal fun strIsAbsoluteHttpUrl(value: String): Boolean {
+    val lower = value.trimStart().lowercase()
+    return lower.startsWith("http://") || lower.startsWith("https://")
+}
+
+internal fun validatedHttpUrl(value: String): URL {
+    val url = try {
+        URL(value)
+    } catch (exc: Exception) {
+        throw ValidationFailed("invalid HTTP URL")
+    }
+    if (url.protocol !in listOf("http", "https")) throw ValidationFailed("HTTP or HTTPS URL is required")
+    if (url.userInfo != null) throw ValidationFailed("URL user information is not allowed")
+    if (url.protocol == "http" && !strIsLoopbackHost(url.host)) {
+        throw ValidationFailed("HTTPS is required for non-local URLs")
+    }
+    return url
+}
+
+internal fun strRequireSameOrigin(path: String, baseUrl: String) {
+    if (!strIsAbsoluteHttpUrl(path)) return
+    val target = validatedHttpUrl(path)
+    val base = validatedHttpUrl(baseUrl)
+    if (target.protocol != base.protocol || !target.host.equals(base.host, true) || target.effectivePort() != base.effectivePort()) {
+        throw ValidationFailed("absolute API URL must match the configured origin")
+    }
+}
+
+private fun strIsLoopbackHost(value: String): Boolean = value.trim('[', ']').lowercase() in setOf(
+    "localhost",
+    "127.0.0.1",
+    "::1",
+    "0:0:0:0:0:0:0:1",
+)
+
+private fun URL.effectivePort(): Int = if (port >= 0) port else defaultPort
 
 fun filePart(fieldName: String, file: File, contentType: String = guessContentType(file.name)): VmodalFilePart =
     VmodalFilePart(fieldName, file.name, file.length(), contentType) { file.inputStream() }

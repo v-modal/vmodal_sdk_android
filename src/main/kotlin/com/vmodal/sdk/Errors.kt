@@ -9,12 +9,6 @@ open class SdkError(
     override fun toString(): String {
         val parts = mutableListOf(message ?: this::class.simpleName.orEmpty())
         if (statusCode != 0) parts += "status=$statusCode"
-        val blob = when {
-            details !in listOf(null, "", emptyList<Any>(), emptyMap<String, Any?>()) -> details.toString()
-            body !in listOf(null, "", emptyList<Any>(), emptyMap<String, Any?>()) -> body.toString()
-            else -> ""
-        }.replace("\n", " ").trim()
-        if (blob.isNotBlank()) parts += if (blob.length > 240) blob.take(237) + "..." else blob
         return parts.joinToString(" | ")
     }
 }

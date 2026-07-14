@@ -8,11 +8,13 @@ class VmodalHttp(
         val out = linkedMapOf<String, String>()
         val userId = cfg.normalizedUserId
         if (requireUserId && userId.isBlank()) throw AuthError("user_id is required")
-        if (userId.isNotBlank()) out["X-User-Id"] = userId
-        if (cfg.normalizedTenantId.isNotBlank()) out["X-Tenant-Id"] = cfg.normalizedTenantId
-        if (cfg.normalizedEmail.isNotBlank()) out["X-User-Email"] = cfg.normalizedEmail
-        if (cfg.normalizedToken.isNotBlank() && (forceToken || cfg.normalizedMode != "direct")) {
-            out["Authorization"] = "Bearer ${cfg.normalizedToken}"
+        if (userId.isNotBlank()) out["X-User-Id"] = strHeaderValue("user_id", userId)
+        if (cfg.normalizedTenantId.isNotBlank()) out["X-Tenant-Id"] = strHeaderValue("tenant_id", cfg.normalizedTenantId)
+        if (cfg.normalizedEmail.isNotBlank()) out["X-User-Email"] = strHeaderValue("email", cfg.normalizedEmail)
+        if (forceToken || cfg.normalizedMode != "direct") {
+            val apiKey = cfg.currentApiKey()
+            if (apiKey.isBlank()) throw AuthError("API key is required")
+            out["Authorization"] = "Bearer $apiKey"
         }
         return out
     }
@@ -39,9 +41,10 @@ class VmodalHttp(
         json: Any? = null,
         params: Map<String, Any?> = emptyMap(),
     ): Map<String, Any?> {
-        if (cfg.normalizedToken.isBlank()) throw AuthError("token is required for users_api routes")
-        val url = if (path.startsWith("http://") || path.startsWith("https://")) path else strUsersBaseUrl(cfg.normalizedBaseUrl) + path
-        return execute(method, url, json, params = params, headers = headers(forceToken = true, requireUserId = false)).jsonObject()
+        val headers = headers(forceToken = true, requireUserId = false)
+        if (headers["Authorization"].isNullOrBlank()) throw AuthError("API key is required for users_api routes")
+        val url = if (strIsAbsoluteHttpUrl(path)) path else strUsersBaseUrl(cfg.normalizedBaseUrl) + path
+        return execute(method, url, json, params = params, headers = headers).jsonObject()
     }
 
     private fun execute(
@@ -53,6 +56,7 @@ class VmodalHttp(
         params: Map<String, Any?> = emptyMap(),
         headers: Map<String, String>,
     ): VmodalResponse {
+        strRequireSameOrigin(path, cfg.normalizedBaseUrl)
         val attempts = cfg.normalizedMaxRetries + 1
         var last: RuntimeException? = null
         repeat(attempts) { idx ->
@@ -106,5 +110,12 @@ class VmodalHttp(
 
     private companion object {
         val RETRY_CODES = setOf(500, 502, 503, 504)
+
+        fun strHeaderValue(name: String, value: String): String {
+            if (value.length > 4_096 || value.any { it.isISOControl() }) {
+                throw ValidationFailed("$name contains invalid header characters")
+            }
+            return value
+        }
     }
 }

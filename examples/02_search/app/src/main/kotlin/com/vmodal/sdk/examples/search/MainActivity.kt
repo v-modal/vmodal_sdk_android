@@ -12,7 +12,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 
 class MainActivity : ComponentActivity() {
     private val vm: SearchViewModel by viewModels {
-        SearchViewModel.factory(BuildConfig.VMODAL_API_KEY)
+        SearchViewModel.factory()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

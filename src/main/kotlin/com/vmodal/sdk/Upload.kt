@@ -124,13 +124,17 @@ interface SignedUploadTransport {
 
 class OkHttpSignedUploadTransport(
     timeoutMillis: Long = 300_000,
-    private val client: OkHttpClient = OkHttpClient.Builder()
+    client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
         .readTimeout(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
         .writeTimeout(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
-        .followRedirects(true)
         .build(),
 ) : SignedUploadTransport {
+    private val client = client.newBuilder()
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .build()
+
     override fun enqueue(
         source: UploadSource,
         url: String,
@@ -145,6 +149,7 @@ class OkHttpSignedUploadTransport(
         onFailure: (Exception) -> Unit,
     ): UploadHandle {
         if (url.isBlank()) throw ValidationFailed("signed upload URL is empty")
+        validatedHttpUrl(url)
         val body = StreamRequestBody(source, offset, length, onProgress)
         val builder = Request.Builder().url(url).method(method.uppercase(), body)
         // A pre-signed URL is already the authorization. Forwarding the SDK bearer/user headers

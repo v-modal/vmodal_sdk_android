@@ -25,10 +25,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,6 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,13 +50,14 @@ import coil.compose.SubcomposeAsyncImageContent
 @Composable
 fun SearchScreen(vm: SearchViewModel) {
     val state by vm.state.collectAsStateWithLifecycle()
+    var apiKey by remember { mutableStateOf("") }
     var query by rememberSaveable { mutableStateOf("") }
     var group by rememberSaveable { mutableStateOf("agroup") }
     var stream by rememberSaveable { mutableStateOf("astream") }
     val focus = LocalFocusManager.current
     val submit = {
         focus.clearFocus()
-        vm.search(query, group, stream)
+        vm.search(apiKey, query, group, stream)
     }
 
     Scaffold(
@@ -64,14 +69,20 @@ fun SearchScreen(vm: SearchViewModel) {
                 .padding(innerPadding),
         ) {
             SearchForm(
+                apiKey = apiKey,
                 query = query,
                 group = group,
                 stream = stream,
                 loading = state.loading,
+                onApiKeyChange = { apiKey = it },
                 onQueryChange = { query = it },
                 onGroupChange = { group = it },
                 onStreamChange = { stream = it },
                 onSearch = submit,
+                onForgetKey = {
+                    apiKey = ""
+                    vm.clearCredentials()
+                },
             )
             SearchBody(state)
         }
@@ -80,19 +91,31 @@ fun SearchScreen(vm: SearchViewModel) {
 
 @Composable
 private fun SearchForm(
+    apiKey: String,
     query: String,
     group: String,
     stream: String,
     loading: Boolean,
+    onApiKeyChange: (String) -> Unit,
     onQueryChange: (String) -> Unit,
     onGroupChange: (String) -> Unit,
     onStreamChange: (String) -> Unit,
     onSearch: () -> Unit,
+    onForgetKey: () -> Unit,
 ) {
     Column(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        OutlinedTextField(
+            value = apiKey,
+            onValueChange = onApiKeyChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Runtime API key") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        )
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
@@ -136,6 +159,13 @@ private fun SearchForm(
             } else {
                 Text("Search")
             }
+        }
+        TextButton(
+            onClick = onForgetKey,
+            enabled = apiKey.isNotBlank(),
+            modifier = Modifier.align(Alignment.End),
+        ) {
+            Text("Forget API key")
         }
     }
 }

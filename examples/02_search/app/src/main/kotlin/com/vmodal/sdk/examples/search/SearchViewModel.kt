@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vmodal.sdk.Client
+import com.vmodal.sdk.MutableApiKeyProvider
 import com.vmodal.sdk.PUBLIC_GATEWAY_URL
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -41,11 +42,13 @@ class SearchViewModel private constructor(private val repo: SearchRepository) : 
     val state: StateFlow<SearchUiState> = mutableState.asStateFlow()
     private var searchJob: Job? = null
 
-    fun search(query: String, group: String, stream: String) {
+    fun search(apiKey: String, query: String, group: String, stream: String) {
+        val cleanKey = apiKey.trim()
         val cleanQuery = query.trim()
         val cleanGroup = group.trim()
         val cleanStream = stream.trim()
         val validation = when {
+            cleanKey.isBlank() -> "Enter a runtime API key."
             cleanQuery.isBlank() -> "Enter search text."
             cleanGroup.isBlank() -> "Enter a collection name."
             cleanStream.isBlank() -> "Enter a stream name."
@@ -61,7 +64,7 @@ class SearchViewModel private constructor(private val repo: SearchRepository) : 
             mutableState.value = SearchUiState(loading = true)
             try {
                 val output = withContext(Dispatchers.IO) {
-                    repo.search(cleanQuery, cleanGroup, cleanStream)
+                    repo.search(cleanKey, cleanQuery, cleanGroup, cleanStream)
                 }
                 mutableState.value = SearchUiState(
                     searched = true,
@@ -80,25 +83,33 @@ class SearchViewModel private constructor(private val repo: SearchRepository) : 
         }
     }
 
+    fun clearCredentials() {
+        searchJob?.cancel()
+        repo.clearCredentials()
+        mutableState.value = SearchUiState()
+    }
+
+    override fun onCleared() {
+        repo.clearCredentials()
+        super.onCleared()
+    }
+
     companion object {
-        fun factory(apiToken: String): ViewModelProvider.Factory =
+        fun factory(): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    SearchViewModel(SearchRepository(apiToken)) as T
+                    SearchViewModel(SearchRepository()) as T
             }
     }
 }
 
-private class SearchRepository(private val apiToken: String) {
+private class SearchRepository {
+    private var keys: MutableApiKeyProvider? = null
     private var sdk: Client? = null
 
-    fun search(query: String, group: String, stream: String): SearchOutput {
-        require(apiToken.isNotBlank()) {
-            "Missing VMODAL_API_KEY. See docs/search_app.md for setup."
-        }
-
-        val client = client()
+    fun search(apiKey: String, query: String, group: String, stream: String): SearchOutput {
+        val client = client(apiKey)
         val result = client.searches.searchVideo(
             queryText = query,
             mode = "vid_file",
@@ -137,13 +148,16 @@ private class SearchRepository(private val apiToken: String) {
         return SearchOutput(images, result.cntTotal, result.executionTimeMs)
     }
 
-    private fun client(): Client {
+    @Synchronized
+    private fun client(apiKey: String): Client {
+        val provider = keys ?: MutableApiKeyProvider(apiKey).also { keys = it }
+        provider.rotate(apiKey)
         sdk?.let { return it }
 
         val authClient = Client(
             baseUrl = PUBLIC_GATEWAY_URL,
-            token = apiToken,
             mode = "gateway",
+            apiKeyProvider = provider,
         )
         val me = authClient.auth.me()
         val userId = requireNotNull(me.userId) { "auth/me returned no user_id" }
@@ -154,6 +168,13 @@ private class SearchRepository(private val apiToken: String) {
                 email = me.email.orEmpty(),
             )
         ).also { sdk = it }
+    }
+
+    @Synchronized
+    fun clearCredentials() {
+        keys?.clear()
+        keys = null
+        sdk = null
     }
 
     private fun imageRecord(

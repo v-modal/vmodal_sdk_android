@@ -14,8 +14,10 @@ how to add the SDK to Gradle, enable network access, and obtain a ready-to-use
 Use these examples first:
 
 1. [Create a gateway client](01_create_gateway_client.kt) from an API token.
-2. [Read identity and health](03_identity_and_health.kt) and print the result.
-3. [List collection groups](06_list_groups.kt) so you have a real collection
+2. For a long-lived parent app, [load and rotate the API key](03_rotate_api_key.kt)
+   without recreating the client.
+3. [Read identity and health](03_identity_and_health.kt) and print the result.
+4. [List collection groups](06_list_groups.kt) so you have a real collection
    name for later examples.
 
 At this point, installation, authentication, and basic data access should all
@@ -23,8 +25,8 @@ work.
 
 ### Stage 2: search existing data
 
-4. [Run a text search](04_text_search.kt).
-5. Add date, metadata, or image filters with the
+5. [Run a text search](04_text_search.kt).
+6. Add date, metadata, or image filters with the
    [filtered multimodal search](05_filtered_search.kt).
 
 Replace sample collection names, stream names, queries, and IDs with values
@@ -72,6 +74,6 @@ Client resource calls are blocking except `videoUploadAsync()` and
 or another worker thread. Async upload callbacks also run off the main thread,
 so switch to the main dispatcher before updating Android views.
 
-The snippets intentionally contain no real credential. Obtain the API token
-through the application's approved authentication flow and pass it to the
-gateway client factory.
+The snippets intentionally contain no real credential. The parent application
+must obtain the API key from its authenticated backend and inject it at runtime;
+do not bundle it in source, `BuildConfig`, resources, or the manifest.

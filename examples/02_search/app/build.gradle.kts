@@ -1,21 +1,7 @@
-import java.util.Properties
-
 plugins {
     id("com.android.application")
     kotlin("android")
 }
-
-fun String.asBuildConfigString(): String =
-    "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
-
-val localProperties = Properties().apply {
-    rootProject.file("local.properties").takeIf { it.isFile }?.inputStream()?.use(::load)
-}
-val apiToken = providers.gradleProperty("VMODAL_API_KEY")
-    .orElse(providers.environmentVariable("VMODAL_API_KEY"))
-    .orElse(providers.environmentVariable("TEST_CLIENT_CLERK_USER_API_TOKEN"))
-    .orElse(providers.provider { localProperties.getProperty("VMODAL_API_KEY", "") })
-    .orElse("")
 
 android {
     namespace = "com.vmodal.sdk.examples.search"
@@ -28,11 +14,9 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        buildConfigField("String", "VMODAL_API_KEY", apiToken.get().asBuildConfigString())
     }
 
     buildFeatures {
-        buildConfig = true
         compose = true
     }
 

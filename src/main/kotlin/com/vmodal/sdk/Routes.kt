@@ -79,7 +79,7 @@ object Routes {
     fun usersFull(path: String): String = addPrefix(path, USERS_API_PREFIX)
 
     private fun addPrefix(path: String, prefix: String): String {
-        if (path.startsWith("http://") || path.startsWith("https://")) return path
+        if (strIsAbsoluteHttpUrl(path)) return path
         val clean = if (path.startsWith("/")) path else "/$path"
         return prefix + clean
     }
