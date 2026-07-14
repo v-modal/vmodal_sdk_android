@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7F52FF"/>
+      <stop offset="55%" stop-color="#5B6CFF"/>
+      <stop offset="100%" stop-color="#2EC5FF"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#bg)"/>
+  <!-- V mark -->
+  <path d="M62 70 L112 186 L128 186 L86 70 Z" fill="#ffffff" opacity="0.95"/>
+  <!-- play triangle forming right stroke of the V -->
+  <path d="M194 70 L138 186 L122 186 L170 70 Z" fill="#ffffff" opacity="0.75"/>
+  <path d="M150 106 L196 128 L150 150 Z" fill="#0B1B3A" opacity="0.85"/>
+</svg>

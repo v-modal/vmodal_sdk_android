@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="220" viewBox="0 0 860 220" role="img" aria-label="V-Modal Android SDK">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#101B3C"/>
+      <stop offset="100%" stop-color="#1B1140"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7F52FF"/>
+      <stop offset="55%" stop-color="#5B6CFF"/>
+      <stop offset="100%" stop-color="#2EC5FF"/>
+    </linearGradient>
+    <linearGradient id="txt" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#B39DFF"/>
+      <stop offset="100%" stop-color="#6FDBFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="860" height="220" rx="24" fill="url(#bg)"/>
+
+  <!-- filmstrip strip on the right -->
+  <g opacity="0.16" fill="#FFFFFF">
+    <rect x="700" y="0" width="26" height="220"/>
+    <g fill="#101B3C">
+      <rect x="706" y="14" width="14" height="18" rx="3"/>
+      <rect x="706" y="52" width="14" height="18" rx="3"/>
+      <rect x="706" y="90" width="14" height="18" rx="3"/>
+      <rect x="706" y="128" width="14" height="18" rx="3"/>
+      <rect x="706" y="166" width="14" height="18" rx="3"/>
+    </g>
+    <rect x="820" y="0" width="26" height="220"/>
+    <g fill="#101B3C">
+      <rect x="826" y="14" width="14" height="18" rx="3"/>
+      <rect x="826" y="52" width="14" height="18" rx="3"/>
+      <rect x="826" y="90" width="14" height="18" rx="3"/>
+      <rect x="826" y="128" width="14" height="18" rx="3"/>
+      <rect x="826" y="166" width="14" height="18" rx="3"/>
+    </g>
+  </g>
+
+  <!-- logo mark -->
+  <g transform="translate(36 40)">
+    <rect width="140" height="140" rx="32" fill="url(#mark)"/>
+    <path d="M32 38 L61 106 L71 106 L46 38 Z" fill="#FFFFFF" opacity="0.95"/>
+    <path d="M110 38 L77 106 L67 106 L96 38 Z" fill="#FFFFFF" opacity="0.75"/>
+    <path d="M84 59 L112 72 L84 85 Z" fill="#0B1B3A" opacity="0.85"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="210" y="106" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="52" font-weight="800" fill="url(#txt)" letter-spacing="1">V-MODAL</text>
+  <text x="212" y="146" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="22" font-weight="500" fill="#C9D4F2">Android SDK — video search for Kotlin apps</text>
+  <text x="212" y="178" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+        font-size="16" fill="#8FA0C9">v-modal.com</text>
+</svg>
