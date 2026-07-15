@@ -46,8 +46,9 @@ them with natural language. The SDK also manages collections, uploads large
 files with resumable multipart streaming, and plays nicely with
 `Dispatchers.IO`, `lifecycleScope`, and WorkManager.
 
-> The SDK is currently added from this repository's source code. It is not yet
-> published to a Maven repository.
+Release artifacts are configured to use the Maven Central coordinates
+`com.vmodal:vmodal-sdk-android:<version>`. Source-project inclusion remains
+available for contributors.
 
 ## 📋 What you need
 
@@ -55,7 +56,7 @@ files with resumable multipart streaming, and plays nicely with
 |---|---|
 | <img src="assets/kotlin-original.svg" width="16"/> Kotlin project | Android project using Gradle Kotlin DSL |
 | ☕ Java 17 | `sourceCompatibility` / `jvmTarget = "17"` |
-| 📦 This repository | Checked out next to, or inside, your Android project |
+| 📦 Maven Central | The requested version must have passed the release workflow and been published |
 | 🔑 API key | Loaded at runtime from your authenticated application backend |
 
 > ⚠️ Never bundle a real API key in source, `BuildConfig`, resources, or
@@ -65,21 +66,12 @@ files with resumable multipart streaming, and plays nicely with
 
 Three steps from zero to your first API response.
 
-### 1️⃣ Add the SDK project
+### 1️⃣ Add the SDK dependency
 
-Open your Android project's `settings.gradle.kts` and add:
+Confirm that the requested SDK version is published in Maven Central. Until the
+first registry release completes, contributors must use the source project.
 
-```kotlin
-include(":vmodal-sdk-android")
-project(":vmodal-sdk-android").projectDir =
-    file("../vmx_api/uinterface/sdk_android")
-```
-
-The path passed to `file(...)` is relative to `settings.gradle.kts`. Change it
-if your repository is in a different location.
-
-In the same file, make sure `dependencyResolutionManagement.repositories`
-contains `mavenCentral()`:
+Make sure your Android project's `settings.gradle.kts` contains Maven Central:
 
 ```kotlin
 dependencyResolutionManagement {
@@ -105,7 +97,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":vmodal-sdk-android"))
+    implementation("com.vmodal:vmodal-sdk-android:1.0.0")
 }
 ```
 
@@ -313,7 +305,12 @@ flowchart LR
 4. Keep the returned `UploadHandle` if the UI needs a Cancel action.
 
 The SDK streams the video instead of loading the whole file into memory. Files
-of at least 100 MiB use multipart upload by default.
+of at least 100 MiB select multipart upload by default.
+
+**TODO: production does not currently expose the multipart route family. Pass
+`VideoUploadOptions(multipart = false)` for production uploads until those
+routes are available. The multipart implementation is retained for Python SDK
+parity and is covered by offline regression tests.**
 
 ## 🛠️ Troubleshooting
 
@@ -322,7 +319,7 @@ of at least 100 MiB use multipart upload by default.
 | `VMODAL_API_KEY is required` | `Client.fromEnv()` is intended for JVM tools and CI, where environment variables exist. In an Android app, inject a runtime API-key provider as shown in the quick start. |
 | `auth/me returned no user_id` or auth error | Confirm the API key is current and belongs to the environment identified by `PUBLIC_GATEWAY_URL`. Do not invent or hard-code a user ID; `auth.me()` resolves the key owner. |
 | `NetworkOnMainThreadException` or frozen UI | Move blocking calls (`auth.me()`, `health()`, `listGroups()`, `searchVideo()`) to `Dispatchers.IO` or WorkManager. `videoUploadAsync()` already runs off the main thread, but its callbacks do too — switch to `Dispatchers.Main` before updating views. |
-| Gradle cannot find the SDK project | Check the path in `settings.gradle.kts`. It must point to this exact directory: `uinterface/sdk_android`. |
+| Gradle cannot resolve the SDK | Confirm `mavenCentral()` is configured and use a released version from the public repository. |
 
 ## ✅ Verify the SDK checkout
 
@@ -330,12 +327,15 @@ These commands test the SDK itself; they are not required each time the Android
 app runs:
 
 ```bash
-cd uinterface/sdk_android
-bash install.sh check   # verifies Java and Gradle
-bash test.sh all        # offline regression suite + simulated app
+gradle --no-daemon clean build publishToMavenLocal
+cd examples/02_search
+./gradlew --no-daemon :app:assembleDebug \
+  -PvmodalUseMavenLocal=true -PvmodalSdkVersion=1.0.0
 ```
 
-No emulator or API token required.
+This verifies both the Maven publication and Android consumption. No emulator
+or API token is required. Maintainers can follow the
+[Maven Central release guide](docs/maven_release.md).
 
 ## 🗺️ Learn progressively
 

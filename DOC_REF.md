@@ -2,6 +2,8 @@
 
 Package: `com.vmodal.sdk`
 
+Maven: `com.vmodal:vmodal-sdk-android:1.0.0`
+
 Use this page after completing the root [quick start](README.md). It indexes the
 SDK's public entrypoints; it is not intended to be read from top to bottom.
 Optional parameters and defaults are abbreviated where the full declaration
@@ -88,6 +90,9 @@ present in the repository environment are also supported.
 
 Disabled methods deliberately throw `FeatureDisabled`: `uploadFolder()`,
 `create()`, `edit()`, `autoIndexGet()`, and `autoIndexSet()`.
+
+**DEPRECATED:** `/collection/upload/google_drive` is retained only as a route
+constant for upstream parity and is not exposed by `CollectionsResource`.
 
 ## Signed video uploads
 

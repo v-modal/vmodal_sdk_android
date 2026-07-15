@@ -6,6 +6,9 @@ object Routes {
 
     const val externalUploadGetSignedUrl = "/collections/external_upload_get_signed_url"
     const val externalUploadDone = "/collection/upload/done"
+    // **TODO: Production does not currently expose the five multipart routes below.
+    // Keep them for sdk_python contract parity and offline regression coverage, but
+    // do not enable forced multipart live coverage until the backend supports them.**
     const val externalUploadMultipartCreate = "/collections/external_upload_multipart/create"
     const val externalUploadMultipartSignParts = "/collections/external_upload_multipart/sign_parts"
     const val externalUploadMultipartStatus = "/collections/external_upload_multipart/status"
@@ -22,6 +25,9 @@ object Routes {
         const val indexationDelete = "/indexation/index/delete"
         const val upload = "/collection/upload"
         const val uploadFolder = "/upload/folder"
+        // **DEPRECATED:** `/collection/upload/google_drive` remains only for route-table parity. Do not expose it in the SDK.
+        @Deprecated("Google Drive upload is deprecated; use signed videoUpload instead")
+        const val uploadGoogleDriveFolder = "/collection/upload/google_drive"
         const val uploadMetadataJsonl = "/collection/upload/metadata"
         const val collectionDescriptionUpdate = "/collection/description/update"
         const val uploadMetadataItemParquetInternal = "/api/internal/v1/collection/upload/metadata"

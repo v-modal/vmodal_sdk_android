@@ -1,0 +1,109 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.vmodal",
+    "module": "vmodal-sdk-android",
+    "version": "1.0.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.10.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "1.9.24"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "vmodal-sdk-android-1.0.0.jar",
+          "url": "vmodal-sdk-android-1.0.0.jar",
+          "size": 258201,
+          "sha512": "fbe0dfca4f5ec71b966a9f74e6ef759072385bc809278acdac3aa5ed4f4096c7282d5f3a146df03180ebd1ea87c6bfc4e2f7635d20475b6fb1523284f724f5fb",
+          "sha256": "fac1508a6fb10103b80728a9d169d75c27e3c86211cbaac3782588acaaf5f594",
+          "sha1": "4db4c5ee59fddd1eeba164fbbd8c7469eb43817c",
+          "md5": "8799d549d2dd53523af1ef8fd73e971b"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "com.squareup.okhttp3",
+          "module": "okhttp",
+          "version": {
+            "requires": "4.12.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "1.9.24"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "vmodal-sdk-android-1.0.0.jar",
+          "url": "vmodal-sdk-android-1.0.0.jar",
+          "size": 258201,
+          "sha512": "fbe0dfca4f5ec71b966a9f74e6ef759072385bc809278acdac3aa5ed4f4096c7282d5f3a146df03180ebd1ea87c6bfc4e2f7635d20475b6fb1523284f724f5fb",
+          "sha256": "fac1508a6fb10103b80728a9d169d75c27e3c86211cbaac3782588acaaf5f594",
+          "sha1": "4db4c5ee59fddd1eeba164fbbd8c7469eb43817c",
+          "md5": "8799d549d2dd53523af1ef8fd73e971b"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "vmodal-sdk-android-1.0.0-sources.jar",
+          "url": "vmodal-sdk-android-1.0.0-sources.jar",
+          "size": 28346,
+          "sha512": "195b7c07eafadfdeba193e587cd3622bf4a562cc130b41a7ea03eb946feec908c9bfccd1ff4ca7b98fa3f76e1be67612f04d0f1fd559a31291f1fefedd525451",
+          "sha256": "6026b4d0d40d21063933c7dd39e492b45a6e4fb40e7be1470843b52d90b24f5c",
+          "sha1": "668ff66ffed2009c2615a4582d652f26a0057a17",
+          "md5": "5f188db6d12b79a719465ed830fd10ea"
+        }
+      ]
+    }
+  ]
+}

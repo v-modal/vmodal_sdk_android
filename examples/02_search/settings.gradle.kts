@@ -9,6 +9,9 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        if (providers.gradleProperty("vmodalUseMavenLocal").orNull == "true") {
+            mavenLocal()
+        }
         google()
         mavenCentral()
     }
@@ -17,5 +20,7 @@ dependencyResolutionManagement {
 rootProject.name = "vmodal-search-example"
 
 include(":app")
-include(":vmodal-sdk-android")
-project(":vmodal-sdk-android").projectDir = file("../..")
+if (providers.gradleProperty("vmodalUseMavenLocal").orNull != "true") {
+    include(":vmodal-sdk-android")
+    project(":vmodal-sdk-android").projectDir = file("../..")
+}

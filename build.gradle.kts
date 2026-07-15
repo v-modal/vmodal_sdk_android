@@ -1,5 +1,9 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinJvm
+
 plugins {
     kotlin("jvm") version "1.9.24"
+    id("com.vanniktech.maven.publish") version "0.34.0"
 }
 
 group = "com.vmodal"
@@ -11,6 +15,45 @@ dependencies {
 
 kotlin {
     jvmToolchain(17)
+}
+
+mavenPublishing {
+    configure(
+        KotlinJvm(
+            javadocJar = JavadocJar.Empty(),
+            sourcesJar = true,
+        )
+    )
+    coordinates("com.vmodal", "vmodal-sdk-android", version.toString())
+    publishToMavenCentral(automaticRelease = true)
+    if (providers.gradleProperty("signingInMemoryKey").isPresent) {
+        signAllPublications()
+    }
+    pom {
+        name.set("VModal Android SDK")
+        description.set("Multimodal video and image search SDK for Android and Kotlin")
+        inceptionYear.set("2026")
+        url.set("https://github.com/v-modal/vmodal_sdk_android")
+        licenses {
+            license {
+                name.set("The Apache License, Version 2.0")
+                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                distribution.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+            }
+        }
+        developers {
+            developer {
+                id.set("v-modal")
+                name.set("V-Modal")
+                url.set("https://v-modal.com")
+            }
+        }
+        scm {
+            url.set("https://github.com/v-modal/vmodal_sdk_android")
+            connection.set("scm:git:git://github.com/v-modal/vmodal_sdk_android.git")
+            developerConnection.set("scm:git:ssh://git@github.com/v-modal/vmodal_sdk_android.git")
+        }
+    }
 }
 
 val sim by sourceSets.creating {
@@ -25,25 +68,31 @@ val live by sourceSets.creating {
     runtimeClasspath += output + compileClasspath
 }
 
-tasks.register<JavaExec>("regressionTest") {
-    dependsOn(tasks.testClasses)
-    classpath = sourceSets.test.get().runtimeClasspath
-    mainClass.set("com.vmodal.sdk.VmodalSdkRegressionTestKt")
+if (file("src/test/kotlin/com/vmodal/sdk/VmodalSdkRegressionTest.kt").isFile) {
+    tasks.register<JavaExec>("regressionTest") {
+        dependsOn(tasks.testClasses)
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("com.vmodal.sdk.VmodalSdkRegressionTestKt")
+    }
+
+    tasks.test {
+        dependsOn("regressionTest")
+        enabled = false
+    }
 }
 
-tasks.test {
-    dependsOn("regressionTest")
-    enabled = false
+if (file("src/sim/kotlin/com/vmodal/sdk/SimApp.kt").isFile) {
+    tasks.register<JavaExec>("runSim") {
+        dependsOn(tasks.named(sim.classesTaskName))
+        classpath = sim.runtimeClasspath
+        mainClass.set("com.vmodal.sdk.SimAppKt")
+    }
 }
 
-tasks.register<JavaExec>("runSim") {
-    dependsOn(tasks.named(sim.classesTaskName))
-    classpath = sim.runtimeClasspath
-    mainClass.set("com.vmodal.sdk.SimAppKt")
-}
-
-tasks.register<JavaExec>("liveTest") {
-    dependsOn(tasks.named(live.classesTaskName))
-    classpath = live.runtimeClasspath
-    mainClass.set("com.vmodal.sdk.LiveTestKt")
+if (file("src/live/kotlin/com/vmodal/sdk/LiveTest.kt").isFile) {
+    tasks.register<JavaExec>("liveTest") {
+        dependsOn(tasks.named(live.classesTaskName))
+        classpath = live.runtimeClasspath
+        mainClass.set("com.vmodal.sdk.LiveTestKt")
+    }
 }

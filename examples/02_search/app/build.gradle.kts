@@ -35,7 +35,12 @@ android {
 }
 
 dependencies {
-    implementation(project(":vmodal-sdk-android"))
+    if (providers.gradleProperty("vmodalUseMavenLocal").orNull == "true") {
+        val sdkVersion = providers.gradleProperty("vmodalSdkVersion").getOrElse("1.0.0")
+        implementation("com.vmodal:vmodal-sdk-android:$sdkVersion")
+    } else {
+        implementation(project(":vmodal-sdk-android"))
+    }
 
     val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
     implementation(composeBom)
