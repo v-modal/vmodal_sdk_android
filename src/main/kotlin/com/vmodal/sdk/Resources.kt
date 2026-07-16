@@ -78,14 +78,14 @@ class CollectionsResource(internal val http: VmodalHttp, internal val signedUplo
         writeMode: String = "append",
         allowOverlap: Boolean = false,
     ): MetadataParquetUploadResponse {
-        val form = mapOf(
-            "user_id" to http.cfg.normalizedUserId,
+        val form = linkedMapOf<String, Any?>(
             "mode" to mode,
             "group_name" to groupName,
             "stream_name" to streamName,
             "write_mode" to writeMode,
             "allow_overlap" to allowOverlap.toString(),
         )
+        if (http.cfg.normalizedMode == "direct") form["user_id"] = http.cfg.normalizedUserId
         val body = try {
             http.request("POST", Routes.full(Routes.Endpoints.uploadMetadataJsonl), data = form, files = listOf(part))
         } catch (exc: ApiError) {
@@ -183,17 +183,12 @@ class AdminResource(private val http: VmodalHttp) {
 }
 
 class R2Resource(private val http: VmodalHttp) {
-    fun getCredentials(dirPrefix: String = ""): R2CredentialsResponse {
-        val params = if (dirPrefix.isBlank()) emptyMap() else mapOf("dir_prefix" to dirPrefix.trim())
-        return R2CredentialsResponse(http.requestUsers("GET", Routes.usersFull(Routes.UsersEndpoints.r2Credentials), params = params))
-    }
-
-    fun presignUploadFile(mode: String, groupName: String, streamName: String, modality: String, filename: String, expiresIn: Int = 86400): PresignedUploadResponse {
+    fun presignUploadFile(mode: String, groupName: String, streamName: String, modality: String, filename: String, expiresIn: Int = 900): PresignedUploadResponse {
         val params = mapOf("mode" to mode, "group_name" to groupName, "stream_name" to streamName, "modality" to modality, "filename" to filename, "expires_in" to expiresIn)
         return PresignedUploadResponse(http.requestUsers("GET", Routes.usersFull(Routes.UsersEndpoints.r2UploadFile), params = params))
     }
 
-    fun presignUploadFolderVideo(mode: String, groupName: String, streamName: String, filenames: List<String>, expiresIn: Int = 86400): PresignedFolderResponse {
+    fun presignUploadFolderVideo(mode: String, groupName: String, streamName: String, filenames: List<String>, expiresIn: Int = 900): PresignedFolderResponse {
         val body = mapOf("mode" to mode, "group_name" to groupName, "stream_name" to streamName, "filenames" to filenames, "expires_in" to expiresIn)
         return PresignedFolderResponse(http.requestUsers("POST", Routes.usersFull(Routes.UsersEndpoints.r2UploadFolderVideo), json = body))
     }
@@ -203,25 +198,26 @@ class ImagesResource(private val http: VmodalHttp) {
     fun getUrl(mode: String, groupName: String, modality: String, filename: String, streamName: String = "astream", tsUnix13digits: Any? = null, userid: String? = null): ImageUrlResponse {
         val data = linkedMapOf<String, Any?>("mode" to mode, "group_name" to groupName, "modality" to modality, "stream_name" to streamName, "filename" to filename)
         if (tsUnix13digits != null) data["ts_unix_13digits"] = tsUnix13digits.toString()
-        if (!userid.isNullOrBlank()) data["userid"] = userid
+        if (http.cfg.normalizedMode == "direct" && !userid.isNullOrBlank()) data["userid"] = userid
         return ImageUrlResponse(http.request("POST", Routes.full(Routes.Endpoints.imageGetUrl), json = data))
     }
 
     fun getUrlBulk(records: List<Map<String, Any?>>, userid: String? = null): ImageUrlBulkResponse {
-        val data = linkedMapOf<String, Any?>("records" to records)
-        if (!userid.isNullOrBlank()) data["userid"] = userid
+        val safeRecords = if (http.cfg.normalizedMode == "direct") records else records.map { it - "userid" - "user_id" }
+        val data = linkedMapOf<String, Any?>("records" to safeRecords)
+        if (http.cfg.normalizedMode == "direct" && !userid.isNullOrBlank()) data["userid"] = userid
         return ImageUrlBulkResponse(http.request("POST", Routes.full(Routes.Endpoints.imageGetUrlBulk), json = data))
     }
 
     fun getImageFromUrl(urlPreSigned: String, userid: String? = null): ByteArray {
         val data = linkedMapOf<String, Any?>("url_pre_signed" to urlPreSigned)
-        if (!userid.isNullOrBlank()) data["userid"] = userid
+        if (http.cfg.normalizedMode == "direct" && !userid.isNullOrBlank()) data["userid"] = userid
         return http.requestBytes("POST", Routes.full(Routes.Endpoints.imageGetImage), json = data)
     }
 
     fun getImageBulkFromUrls(urls: List<String>, userid: String? = null): ImageGetBulkResponse {
         val data = linkedMapOf<String, Any?>("urls" to urls)
-        if (!userid.isNullOrBlank()) data["userid"] = userid
+        if (http.cfg.normalizedMode == "direct" && !userid.isNullOrBlank()) data["userid"] = userid
         return ImageGetBulkResponse(http.request("POST", Routes.full(Routes.Endpoints.imageGetImageBulk), json = data))
     }
 }

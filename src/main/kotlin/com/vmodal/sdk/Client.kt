@@ -19,21 +19,20 @@ class Client(
     val r2 = R2Resource(http)
 
     constructor(
-        baseUrl: String = "",
+        baseUrl: String = PUBLIC_GATEWAY_URL,
         userId: String = "",
         tenantId: String = "",
         email: String = "",
         token: String = "",
         timeoutMillis: Int = 30_000,
-        mode: String = "direct",
         maxRetries: Int = 1,
         transport: VmodalTransport? = null,
         signedUploads: SignedUploadTransport? = null,
         apiKeyProvider: ApiKeyProvider? = null,
     ) : this(
-        SdkConfig(baseUrl, userId, tenantId, email, token, timeoutMillis, mode, maxRetries, apiKeyProvider),
+        SdkConfig(baseUrl, userId, tenantId, email, token, timeoutMillis, "gateway", maxRetries, apiKeyProvider),
         transport ?: HttpUrlConnectionTransport(
-            SdkConfig(baseUrl, userId, tenantId, email, token, timeoutMillis, mode, maxRetries, apiKeyProvider)
+            SdkConfig(baseUrl, userId, tenantId, email, token, timeoutMillis, "gateway", maxRetries, apiKeyProvider)
         ),
         signedUploads ?: OkHttpSignedUploadTransport(timeoutMillis.toLong()),
     )
@@ -53,12 +52,31 @@ class Client(
             val uploads = signedUploads ?: OkHttpSignedUploadTransport(cfg.timeoutMillis.toLong())
             val client = Client(cfg, net, uploads)
             if (!resolveIdentity || cfg.normalizedUserId.isNotBlank()) return client
-            // Gateway requests need the API-key owner fields for parity with Python SdkConfig.from_env.
-            // Resolve them once via users_api; no identity values are accepted from the app blindly.
+            // Resolve profile fields for client-side identity/reporting. Gateway requests still
+            // authenticate only with the bearer token and never forward these values as identity.
             val me = client.auth.me()
             val resolved = cfg.copy(userId = me.userId.orEmpty(), tenantId = me.tenantId.orEmpty(), email = me.email.orEmpty())
             if (resolved.normalizedUserId.isBlank()) throw AuthError("auth/me returned no user_id")
             return Client(resolved, transport ?: HttpUrlConnectionTransport(resolved), uploads)
+        }
+
+        /** Trusted-network escape hatch. Never use caller identity as an Internet trust boundary. */
+        fun unsafeDirect(
+            baseUrl: String,
+            userId: String,
+            tenantId: String = "",
+            email: String = "",
+            timeoutMillis: Int = 30_000,
+            maxRetries: Int = 1,
+            transport: VmodalTransport? = null,
+            signedUploads: SignedUploadTransport? = null,
+        ): Client {
+            val cfg = SdkConfig(baseUrl, userId, tenantId, email, timeoutMillis = timeoutMillis, mode = "direct", maxRetries = maxRetries)
+            return Client(
+                cfg,
+                transport ?: HttpUrlConnectionTransport(cfg),
+                signedUploads ?: OkHttpSignedUploadTransport(timeoutMillis.toLong()),
+            )
         }
     }
 }

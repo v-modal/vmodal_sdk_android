@@ -343,19 +343,6 @@ class CacheStats(raw: Map<String, Any?>) : JsonBackedResponse(raw) {
     val config = raw["config"] as? Map<String, Any?> ?: emptyMap()
 }
 
-class R2CredentialsResponse(raw: Map<String, Any?>) : JsonBackedResponse(raw) {
-    val userId = raw["user_id"]?.toString().orEmpty()
-    val accessKeyId = raw["access_key_id"]?.toString().orEmpty()
-    val secretKey = raw["secret_key"]?.toString().orEmpty()
-    val sessionToken = raw["session_token"]?.toString().orEmpty()
-    val expiryDate = raw["expiry_date"]?.toString().orEmpty()
-    val endpointUrl = raw["vmodal_r2_endpoint_url"]?.toString().orEmpty()
-    val basePrefix = raw["vmodal_base_prefix"]?.toString().orEmpty()
-    val bucket = raw["vmodal_bucket"]?.toString().orEmpty()
-    val dataUploadBucket = raw["CLI_USER_R2_BUCKET_DATA_UPLOAD"]?.toString().orEmpty()
-    val dataUploadPrefix = raw["CLI_USER_PREFIX_DATA_UPLOAD"]?.toString().orEmpty()
-}
-
 class PresignedUploadResponse(raw: Map<String, Any?>) : JsonBackedResponse(raw) {
     val userId = raw["user_id"]?.toString().orEmpty()
     val expiresIn = raw["expires_in"].asInt()
@@ -409,20 +396,25 @@ class ImageBulkResponse(raw: Map<String, Any?>) : JsonBackedResponse(raw) {
 }
 
 internal fun Any?.asInt(): Int = when (this) {
-    is Number -> toInt()
+    is Byte, is Short, is Int -> (this as Number).toInt()
+    is Long -> if (this in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()) toInt() else 0
+    is Number -> toDouble().takeIf { it.isFinite() && it % 1.0 == 0.0 && it in Int.MIN_VALUE.toDouble()..Int.MAX_VALUE.toDouble() }?.toInt() ?: 0
     is String -> toIntOrNull() ?: 0
     else -> 0
 }
 
 internal fun Any?.asLong(): Long = when (this) {
-    is Number -> toLong()
+    is Byte, is Short, is Int, is Long -> (this as Number).toLong()
+    is Number -> toDouble().takeIf {
+        it.isFinite() && it % 1.0 == 0.0 && kotlin.math.abs(it) <= 9_007_199_254_740_991.0
+    }?.toLong() ?: 0
     is String -> toLongOrNull() ?: 0
     else -> 0
 }
 
 internal fun Any?.asDouble(): Double = when (this) {
-    is Number -> toDouble()
-    is String -> toDoubleOrNull() ?: 0.0
+    is Number -> toDouble().takeIf { it.isFinite() } ?: 0.0
+    is String -> toDoubleOrNull()?.takeIf { it.isFinite() } ?: 0.0
     else -> 0.0
 }
 

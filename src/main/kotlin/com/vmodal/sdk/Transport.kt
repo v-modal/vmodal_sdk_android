@@ -1,11 +1,18 @@
 package com.vmodal.sdk
 
 import java.io.File
+import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.net.URL
 import java.nio.charset.StandardCharsets
+import java.util.UUID
+
+const val JSON_RESPONSE_LIMIT_BYTES = 8L * 1024 * 1024
+const val ERROR_RESPONSE_LIMIT_BYTES = 1L * 1024 * 1024
+const val BINARY_RESPONSE_LIMIT_BYTES = 64L * 1024 * 1024
 
 class VmodalFilePart(
     val fieldName: String,
@@ -14,6 +21,13 @@ class VmodalFilePart(
     val contentType: String = "application/octet-stream",
     private val opener: () -> InputStream,
 ) {
+    init {
+        strMultipartValue("field name", fieldName, 128)
+        strMultipartValue("file name", fileName, 1_024)
+        strMultipartValue("content type", contentType, 255)
+        if (contentLength < 0) throw ValidationFailed("content_length must not be negative")
+    }
+
     // A reopenable stream keeps multipart uploads retryable without retaining the file in heap.
     // Android callers can pass { contentResolver.openInputStream(uri)!! } as the opener.
     constructor(fieldName: String, fileName: String, bytes: ByteArray, contentType: String = "application/octet-stream") :
@@ -31,6 +45,8 @@ data class VmodalRequest(
     val formFields: Map<String, Any?> = emptyMap(),
     val files: List<VmodalFilePart> = emptyList(),
 ) {
+    internal var responseMode: VmodalResponseMode = VmodalResponseMode.TEXT
+
     override fun toString(): String = buildString {
         append("VmodalRequest(method=").append(method)
         append(", pathType=").append(if (strIsAbsoluteHttpUrl(path)) "absolute" else "relative")
@@ -49,10 +65,13 @@ data class VmodalResponse(
     val headers: Map<String, List<String>> = emptyMap(),
     val bytes: ByteArray = body.toByteArray(StandardCharsets.UTF_8),
 ) {
-    val json: Any? by lazy { if (body.isBlank()) null else runCatching { VmodalJson.parse(body) }.getOrNull() }
+    val json: Any? by lazy { if (body.isEmpty()) null else VmodalJson.parse(body) }
 
     @Suppress("UNCHECKED_CAST")
-    fun jsonObject(): Map<String, Any?> = json as? Map<String, Any?> ?: emptyMap()
+    fun jsonObject(): Map<String, Any?> {
+        if (body.isEmpty()) return emptyMap()
+        return json as? Map<String, Any?> ?: throw MalformedResponse("JSON object response required")
+    }
 
     override fun toString(): String =
         "VmodalResponse(statusCode=$statusCode, headerNames=${headers.keys}, bodyBytes=${bytes.size})"
@@ -62,41 +81,114 @@ interface VmodalTransport {
     fun execute(request: VmodalRequest): VmodalResponse
 }
 
-class HttpUrlConnectionTransport(private val cfg: SdkConfig) : VmodalTransport {
+internal enum class VmodalResponseMode { TEXT, BYTES }
+
+class HttpUrlConnectionTransport private constructor(
+    private val cfg: SdkConfig,
+    private val jsonLimitBytes: Long,
+    private val errorLimitBytes: Long,
+    private val binaryLimitBytes: Long,
+    @Suppress("UNUSED_PARAMETER") marker: Unit,
+) : VmodalTransport {
+    constructor(cfg: SdkConfig) : this(
+        cfg,
+        JSON_RESPONSE_LIMIT_BYTES,
+        ERROR_RESPONSE_LIMIT_BYTES,
+        BINARY_RESPONSE_LIMIT_BYTES,
+        Unit,
+    )
+
+    constructor(
+        cfg: SdkConfig,
+        jsonLimitBytes: Long,
+        errorLimitBytes: Long,
+        binaryLimitBytes: Long,
+    ) : this(cfg, jsonLimitBytes, errorLimitBytes, binaryLimitBytes, Unit)
+
+    init {
+        listOf(jsonLimitBytes, errorLimitBytes, binaryLimitBytes).forEach {
+            if (it <= 0 || it > Int.MAX_VALUE) throw ValidationFailed("response limit is invalid")
+        }
+    }
+
     override fun execute(request: VmodalRequest): VmodalResponse {
+        if (request.files.isNotEmpty()) request.validateMultipart()
         val base = if (strIsAbsoluteHttpUrl(request.path)) "" else cfg.normalizedBaseUrl
         val url = validatedHttpUrl(base + request.path + request.queryParameters.toQueryString())
-        val boundary = "----vmodal-${System.currentTimeMillis()}"
-        val conn = (url.openConnection() as HttpURLConnection).apply {
-            instanceFollowRedirects = false
-            requestMethod = request.method.uppercase()
-            connectTimeout = cfg.timeoutMillis
-            readTimeout = cfg.timeoutMillis
-            setRequestProperty("Accept", "application/json")
-            request.headers.forEach { (key, value) -> setRequestProperty(key, value) }
-            when {
-                request.files.isNotEmpty() -> setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
-                request.formFields.isNotEmpty() -> setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-                request.jsonBody != null -> setRequestProperty("Content-Type", "application/json")
-            }
-        }
-        if (request.method.uppercase() !in listOf("GET", "HEAD") && request.hasBody()) {
-            conn.doOutput = true
-            conn.outputStream.use { out ->
+        val boundary = "----vmodal-${UUID.randomUUID()}"
+        val conn = url.openConnection() as HttpURLConnection
+        try {
+            conn.apply {
+                instanceFollowRedirects = false
+                requestMethod = request.method.uppercase()
+                connectTimeout = cfg.timeoutMillis
+                readTimeout = cfg.timeoutMillis
+                setRequestProperty("Accept", "application/json")
+                request.headers.forEach { (key, value) -> setRequestProperty(key, value) }
                 when {
-                    request.files.isNotEmpty() -> request.writeMultipart(out, boundary)
-                    request.formFields.isNotEmpty() -> out.write(request.formFields.toQueryString(true).toByteArray(StandardCharsets.UTF_8))
-                    request.jsonBody != null -> out.write(VmodalJson.stringify(request.jsonBody).toByteArray(StandardCharsets.UTF_8))
+                    request.files.isNotEmpty() -> setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+                    request.formFields.isNotEmpty() -> setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+                    request.jsonBody != null -> setRequestProperty("Content-Type", "application/json")
                 }
             }
+            if (request.method.uppercase() !in listOf("GET", "HEAD") && request.hasBody()) {
+                conn.doOutput = true
+                conn.outputStream.use { out ->
+                    when {
+                        request.files.isNotEmpty() -> request.writeMultipart(out, boundary)
+                        request.formFields.isNotEmpty() -> out.write(request.formFields.toQueryString(true).toByteArray(StandardCharsets.UTF_8))
+                        request.jsonBody != null -> out.write(VmodalJson.stringify(request.jsonBody).toByteArray(StandardCharsets.UTF_8))
+                    }
+                }
+            }
+            val status = conn.responseCode
+            val success = status in 200..299
+            val limit = when {
+                !success -> errorLimitBytes
+                request.responseMode == VmodalResponseMode.BYTES -> binaryLimitBytes
+                else -> jsonLimitBytes
+            }
+            val declared = responseContentLength(conn.getHeaderField("Content-Length"))
+            val stream = if (success) conn.inputStream else conn.errorStream
+            val bytes = stream?.use { input -> input.bytesBounded(declared, limit) } ?: ByteArray(0)
+            val headers = conn.headerFields.entries.mapNotNull { (key, value) -> key?.let { it to value } }.toMap()
+            val body = if (success && request.responseMode == VmodalResponseMode.BYTES) {
+                ""
+            } else {
+                bytes.toString(StandardCharsets.UTF_8)
+            }
+            return VmodalResponse(status, body, headers, bytes)
+        } finally {
+            conn.disconnect()
         }
-        val status = conn.responseCode
-        val stream = if (status in 200..399) conn.inputStream else conn.errorStream
-        // API responses are small JSON or requested image bytes. Upload request bodies are streamed above.
-        val bytes = stream?.use { it.readBytes() } ?: ByteArray(0)
-        val headers = conn.headerFields.entries.mapNotNull { (key, value) -> key?.let { it to value } }.toMap()
-        return VmodalResponse(status, bytes.toString(StandardCharsets.UTF_8), headers, bytes)
     }
+}
+
+internal fun responseContentLength(value: String?): Long {
+    if (value.isNullOrBlank()) return -1
+    val length = value.trim().toLongOrNull() ?: throw MalformedResponse("invalid Content-Length")
+    if (length < 0) throw MalformedResponse("invalid Content-Length")
+    return length
+}
+
+internal fun InputStream.bytesBounded(declaredLength: Long, limitBytes: Long): ByteArray {
+    if (declaredLength < -1) throw MalformedResponse("invalid Content-Length")
+    if (declaredLength > limitBytes) throw ResponseTooLarge(limitBytes, declaredLength)
+    val initial = when {
+        declaredLength in 0..8_192 -> declaredLength.toInt()
+        else -> 8_192
+    }
+    val out = ByteArrayOutputStream(initial)
+    val buf = ByteArray(16 * 1_024)
+    var total = 0L
+    while (true) {
+        val count = read(buf)
+        if (count < 0) break
+        if (total > limitBytes - count) throw ResponseTooLarge(limitBytes, total + count)
+        out.write(buf, 0, count)
+        total += count
+    }
+    return out.toByteArray()
 }
 
 internal fun strIsAbsoluteHttpUrl(value: String): Boolean {
@@ -174,16 +266,30 @@ internal fun Map<String, Any?>.toQueryString(trimPrefix: Boolean = false): Strin
 
 private fun String.urlEncode(): String = URLEncoder.encode(this, StandardCharsets.UTF_8).replace("+", "%20")
 
-private fun VmodalRequest.writeMultipart(out: java.io.OutputStream, boundary: String) {
+internal fun strMultipartValue(name: String, value: String, maxLength: Int): String {
+    if (value.isBlank()) throw ValidationFailed("$name must not be blank")
+    if (value.length > maxLength) throw ValidationFailed("$name is too long")
+    if (value.any { it == '\u0000' || it.isISOControl() }) throw ValidationFailed("$name contains control characters")
+    return value
+}
+
+private fun String.strMultipartQuoted(): String = replace("\\", "\\\\").replace("\"", "\\\"")
+
+private fun VmodalRequest.validateMultipart() {
+    formFields.keys.forEach { strMultipartValue("field name", it, 128) }
+}
+
+internal fun VmodalRequest.writeMultipart(out: OutputStream, boundary: String) {
+    validateMultipart()
     fun text(value: String) = out.write(value.toByteArray(StandardCharsets.UTF_8))
     formFields.forEach { (key, value) ->
         val values = if (value is Iterable<*>) value.toList() else listOf(value)
         values.filterNotNull().forEach {
-            text("--$boundary\r\nContent-Disposition: form-data; name=\"$key\"\r\n\r\n$it\r\n")
+            text("--$boundary\r\nContent-Disposition: form-data; name=\"${key.strMultipartQuoted()}\"\r\n\r\n$it\r\n")
         }
     }
     files.forEach { part ->
-        text("--$boundary\r\nContent-Disposition: form-data; name=\"${part.fieldName}\"; filename=\"${part.fileName}\"\r\n")
+        text("--$boundary\r\nContent-Disposition: form-data; name=\"${part.fieldName.strMultipartQuoted()}\"; filename=\"${part.fileName.strMultipartQuoted()}\"\r\n")
         text("Content-Type: ${part.contentType}\r\n\r\n")
         part.open().use { it.copyTo(out, 1024 * 1024) }
         text("\r\n")

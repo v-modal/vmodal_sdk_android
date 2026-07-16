@@ -10,7 +10,7 @@
   },
   "createdBy": {
     "gradle": {
-      "version": "8.10.2"
+      "version": "8.6"
     }
   },
   "variants": [
@@ -38,11 +38,11 @@
         {
           "name": "vmodal-sdk-android-1.0.0.jar",
           "url": "vmodal-sdk-android-1.0.0.jar",
-          "size": 258201,
-          "sha512": "fbe0dfca4f5ec71b966a9f74e6ef759072385bc809278acdac3aa5ed4f4096c7282d5f3a146df03180ebd1ea87c6bfc4e2f7635d20475b6fb1523284f724f5fb",
-          "sha256": "fac1508a6fb10103b80728a9d169d75c27e3c86211cbaac3782588acaaf5f594",
-          "sha1": "4db4c5ee59fddd1eeba164fbbd8c7469eb43817c",
-          "md5": "8799d549d2dd53523af1ef8fd73e971b"
+          "size": 268451,
+          "sha512": "0c8a4d1dc14e29a722b124028011f95f0765e8ac2225641ee1f70323c8bc84054f97aaeb29f6677b3d4ef94d43386068a65beae4dc753b47e5b670e3df549b3f",
+          "sha256": "8738e706cfe6746481360040075f315c01416eac81ef603d14e5906c10340eab",
+          "sha1": "dc9ca0571ebf8e8c8e2fcd07bd7adfd4c8d96336",
+          "md5": "24e67ba8c2fde679bf458983f5b456b4"
         }
       ]
     },
@@ -66,6 +66,13 @@
           }
         },
         {
+          "group": "com.squareup.moshi",
+          "module": "moshi",
+          "version": {
+            "requires": "1.15.2"
+          }
+        },
+        {
           "group": "org.jetbrains.kotlin",
           "module": "kotlin-stdlib",
           "version": {
@@ -77,11 +84,11 @@
         {
           "name": "vmodal-sdk-android-1.0.0.jar",
           "url": "vmodal-sdk-android-1.0.0.jar",
-          "size": 258201,
-          "sha512": "fbe0dfca4f5ec71b966a9f74e6ef759072385bc809278acdac3aa5ed4f4096c7282d5f3a146df03180ebd1ea87c6bfc4e2f7635d20475b6fb1523284f724f5fb",
-          "sha256": "fac1508a6fb10103b80728a9d169d75c27e3c86211cbaac3782588acaaf5f594",
-          "sha1": "4db4c5ee59fddd1eeba164fbbd8c7469eb43817c",
-          "md5": "8799d549d2dd53523af1ef8fd73e971b"
+          "size": 268451,
+          "sha512": "0c8a4d1dc14e29a722b124028011f95f0765e8ac2225641ee1f70323c8bc84054f97aaeb29f6677b3d4ef94d43386068a65beae4dc753b47e5b670e3df549b3f",
+          "sha256": "8738e706cfe6746481360040075f315c01416eac81ef603d14e5906c10340eab",
+          "sha1": "dc9ca0571ebf8e8c8e2fcd07bd7adfd4c8d96336",
+          "md5": "24e67ba8c2fde679bf458983f5b456b4"
         }
       ]
     },
@@ -97,11 +104,11 @@
         {
           "name": "vmodal-sdk-android-1.0.0-sources.jar",
           "url": "vmodal-sdk-android-1.0.0-sources.jar",
-          "size": 28346,
-          "sha512": "195b7c07eafadfdeba193e587cd3622bf4a562cc130b41a7ea03eb946feec908c9bfccd1ff4ca7b98fa3f76e1be67612f04d0f1fd559a31291f1fefedd525451",
-          "sha256": "6026b4d0d40d21063933c7dd39e492b45a6e4fb40e7be1470843b52d90b24f5c",
-          "sha1": "668ff66ffed2009c2615a4582d652f26a0057a17",
-          "md5": "5f188db6d12b79a719465ed830fd10ea"
+          "size": 34287,
+          "sha512": "5444af04dcc82e9966eac608e33888e3fe7fffb3210739517cd0be35620b804fb3ae4f1d0fc89dbc9d02069278e257d35c88db6eab0bf7e69db9fd97d2878a34",
+          "sha256": "060c72745e8f43478bd77a28c6d83f4fd023f866c395d89a66afdbf9a3ad2279",
+          "sha1": "566e60748e11e806f131f9e252bafb081503b30d",
+          "md5": "4ac18388cbdb7fff2c227ce6b078919b"
         }
       ]
     }

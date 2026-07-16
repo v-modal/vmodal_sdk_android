@@ -1,5 +1,7 @@
 package com.vmodal.sdk
 
+import java.io.IOException
+
 open class SdkError(
     message: String,
     val statusCode: Int = 0,
@@ -23,3 +25,16 @@ class ValidationFailed(message: String, statusCode: Int = 422, body: Any? = null
     SdkError(message, statusCode, body, details)
 
 class FeatureDisabled(message: String) : SdkError(message)
+
+class TransportError(cause: IOException) : SdkError("transport error") {
+    init {
+        initCause(cause)
+    }
+}
+
+class ResponseTooLarge(
+    val limitBytes: Long,
+    val observedBytes: Long,
+) : SdkError("response exceeds the configured limit")
+
+class MalformedResponse(message: String = "malformed JSON response") : SdkError(message)

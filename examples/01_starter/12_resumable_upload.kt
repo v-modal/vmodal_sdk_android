@@ -11,6 +11,7 @@ import java.io.File
 
 fun uploadWithProcessResume(sdk: Client, context: Context, video: File): UploadHandle {
     val options = VideoUploadOptions(
+        multipart = true, // Experimental: the gateway must expose every multipart route.
         resume = true,
         sessionStore = FileUploadSessionStore(
             File(context.noBackupFilesDir, "vmodal-upload-checkpoints")

@@ -1,26 +1,37 @@
 package com.vmodal.sdk
 
-const val PUBLIC_GATEWAY_URL = "https://searchapi-test.v-modal.com"
+import java.util.Base64
+
+const val PUBLIC_GATEWAY_URL_HASH = "aHR0cHM6Ly9zZWFyY2hhcGktdGVzdC52LW1vZGFsLmNvbQ=="
+val PUBLIC_GATEWAY_URL = String(Base64.getDecoder().decode(PUBLIC_GATEWAY_URL_HASH), Charsets.UTF_8)
 const val DEV_GATEWAY_URL = "http://127.0.0.1:3099"
 
 data class SdkConfig(
-    val baseUrl: String,
-    val userId: String,
+    val baseUrl: String = PUBLIC_GATEWAY_URL,
+    val userId: String = "",
     val tenantId: String = "",
     val email: String = "",
     val token: String = "",
     val timeoutMillis: Int = 30_000,
-    val mode: String = "direct",
+    val mode: String = "gateway",
     val maxRetries: Int = 1,
     val apiKeyProvider: ApiKeyProvider? = null,
 ) {
-    val normalizedMode: String = mode.trim().lowercase().ifBlank { "direct" }
+    init {
+        if (timeoutMillis <= 0) throw ValidationFailed("timeout_millis must be positive")
+        if (maxRetries < 0) throw ValidationFailed("max_retries must not be negative")
+        if (mode.trim().lowercase().ifBlank { "gateway" } !in setOf("gateway", "direct")) {
+            throw ValidationFailed("mode must be gateway or direct")
+        }
+    }
+
+    val normalizedMode: String = mode.trim().lowercase().ifBlank { "gateway" }
     val normalizedBaseUrl: String = strGatewayBaseUrl(baseUrl, normalizedMode)
     val normalizedUserId: String = userId.trim()
     val normalizedTenantId: String = tenantId.trim()
     val normalizedEmail: String = email.trim()
     val normalizedToken: String = token.trim()
-    val normalizedMaxRetries: Int = maxOf(0, maxRetries)
+    val normalizedMaxRetries: Int = maxRetries
 
     internal fun currentApiKey(): String {
         val key = apiKeyProvider?.current() ?: normalizedToken
@@ -28,15 +39,15 @@ data class SdkConfig(
     }
 
     override fun toString(): String = buildString {
-        append("SdkConfig(baseUrl=").append(baseUrl)
-        append(", userId=").append(userId)
-        append(", tenantId=").append(tenantId)
-        append(", email=").append(email)
-        append(", token=[REDACTED]")
+        append("SdkConfig(baseUrlConfigured=").append(baseUrl.isNotBlank())
+        append(", userIdConfigured=").append(userId.isNotBlank())
+        append(", tenantIdConfigured=").append(tenantId.isNotBlank())
+        append(", emailConfigured=").append(email.isNotBlank())
+        append(", tokenConfigured=").append(token.isNotBlank())
         append(", timeoutMillis=").append(timeoutMillis)
-        append(", mode=").append(mode)
+        append(", mode=").append(normalizedMode)
         append(", maxRetries=").append(maxRetries)
-        append(", apiKeyProvider=").append(if (apiKeyProvider == null) "null" else "[configured]")
+        append(", apiKeyProviderConfigured=").append(apiKeyProvider != null)
         append(')')
     }
 

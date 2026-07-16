@@ -1,0 +1,34 @@
+# Temporary build-tool-only exceptions. These packages occur only in the
+# independent Android example's AGP classpath and are not shipped in the SDK
+# runtime artifact. Owner: Android SDK release maintainer. Remove by expiry by
+# upgrading AGP/Gradle and regenerating reviewed verification metadata.
+
+[[IgnoredVulns]]
+id = "GHSA-4265-ccf5-phj5"
+ignoreUntil = 2026-08-15
+reason = "Build-only AGP transitive commons-compress; no untrusted archives are processed; owner Android SDK release maintainer"
+
+[[IgnoredVulns]]
+id = "GHSA-4g9r-vxhx-9pgx"
+ignoreUntil = 2026-08-15
+reason = "Build-only AGP transitive commons-compress; no untrusted archives are processed; owner Android SDK release maintainer"
+
+[[IgnoredVulns]]
+id = "GHSA-3677-xxcr-wjqv"
+ignoreUntil = 2026-08-15
+reason = "Build-only AGP transitive jose4j; no JWT handling uses this dependency; owner Android SDK release maintainer"
+
+[[IgnoredVulns]]
+id = "GHSA-6qvw-249j-h44c"
+ignoreUntil = 2026-08-15
+reason = "Build-only AGP transitive jose4j; no JWT handling uses this dependency; owner Android SDK release maintainer"
+
+[[IgnoredVulns]]
+id = "GHSA-7g24-qg88-p43q"
+ignoreUntil = 2026-08-15
+reason = "Build-only AGP transitive jose4j; no JWT handling uses this dependency; owner Android SDK release maintainer"
+
+[[IgnoredVulns]]
+id = "GHSA-jgvc-jfgh-rjvv"
+ignoreUntil = 2026-08-15
+reason = "Build-only AGP transitive jose4j; no JWT handling uses this dependency; owner Android SDK release maintainer"

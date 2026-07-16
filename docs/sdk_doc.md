@@ -4,6 +4,41 @@ This guide starts with a working Android upload and then adds reliability and
 performance features one at a time. Complete the root [quick start](../README.md)
 first so you already have an authenticated `Client` named `sdk`.
 
+## Runtime security contract
+
+Ordinary API requests automatically retry only `GET` and `HEAD`, for recognized
+transport failures or HTTP `500`, `502`, `503`, and `504`, up to
+`1 + maxRetries` total attempts. `POST`, `PUT`, `PATCH`, and `DELETE` are sent
+once because a lost response is an ambiguous mutation outcome. This includes
+POST-based searches and presign calls. Applications must reconcile state before
+choosing to replay them. Signed multipart part recovery remains separate: it
+uses part status and ETag/MD5 reconciliation before retransmission.
+
+Responses are bounded in memory even if `Content-Length` is missing, false, or
+smaller than the delivered body. Defaults are 8 MiB for JSON/text success,
+1 MiB for errors, and 64 MiB for binary success. `requestBytes()` stores only
+the byte payload and leaves the text body empty. `ResponseTooLarge` reports the
+limit and observed/declared count without including response content. These are
+bounded in-memory APIs; they are not unlimited download streams.
+
+JSON uses strict Moshi parsing with one complete top-level value. Comments,
+single quotes, trailing values, malformed escapes, non-finite numbers, and
+excessive nesting fail with a redacted `MalformedResponse`. A malformed nonempty
+response is never silently converted to an empty object. Upload checkpoints are
+also limited to 1 MiB before decoding and parsing.
+
+Multipart field names, filenames, and content types reject blank, over-limit,
+or control-character values. Quotes and backslashes in accepted Unicode names
+are escaped before header encoding; file bytes and form values are unchanged.
+
+Gateway mode is the default and sends no caller-provided identity headers or
+image/body identity overrides; the bearer credential is the identity source.
+`Client.unsafeDirect(...)` is only for an already trusted private network where the
+downstream independently authenticates and authorizes identity headers. Do not
+expose direct mode to an untrusted public network. Production mobile clients
+must use the authenticated gateway with user-scoped, revocable, short-lived
+credentials supplied by their application backend.
+
 ## Before uploading
 
 Keep these three rules in mind:
@@ -75,13 +110,13 @@ val handle = sdk.collections.videoUploadAsync(
 )
 ```
 
-This is enough for a first upload. Files smaller than 100 MiB use one signed
-upload by default; files at or above 100 MiB select multipart upload.
+This is enough for a first upload. Every file size uses one signed upload by
+default. Multipart is never selected automatically by file size.
 
-**TODO: production does not currently expose the
-`/api/external/v1/collections/external_upload_multipart/*` route family. Set
-`VideoUploadOptions(multipart = false)` in production until those routes are
-available. Multipart behavior remains covered by the offline regression suite.**
+The `/api/external/v1/collections/external_upload_multipart/*` route family is
+not available on the production gateway. `VideoUploadOptions(multipart = true)`
+is an explicit experimental opt-in for a custom gateway with the complete
+route family. A missing route produces a clear `FeatureDisabled` error.
 
 The callbacks run off the Android main thread. Switch to `Dispatchers.Main`
 before changing views or other main-thread-only state.
@@ -120,7 +155,7 @@ Never call the blocking form on the Android main thread. WorkManager owns
 background and reboot scheduling; the SDK owns signing, streaming, retries,
 multipart completion, and checkpoint reconciliation.
 
-## Step 5: resume after process death
+## Step 5: resume experimental multipart after process death
 
 The default in-memory checkpoint store can resume transient failures while the
 app process remains alive. For process-death recovery, keep checkpoints in an
@@ -132,6 +167,7 @@ import com.vmodal.sdk.VideoUploadOptions
 import java.io.File
 
 val options = VideoUploadOptions(
+    multipart = true,
     sessionStore = FileUploadSessionStore(
         File(context.noBackupFilesDir, "vmodal-upload-checkpoints")
     ),
@@ -147,7 +183,8 @@ sdk.collections.videoUploadAsync(
 )
 ```
 
-After a restart, construct the same destination, source identity, and
+Use this only after confirming the selected gateway exposes the complete
+multipart capability. After a restart, construct the same destination, source identity, and
 `FileUploadSessionStore`. The SDK compares the checkpoint with authoritative
 server status and uploads only missing or invalid parts.
 
@@ -158,8 +195,9 @@ app should abort a stored multipart session and start over.
 
 ## Step 6: optionally adapt multipart settings
 
-Start with defaults. If large uploads must adapt to current device conditions,
-translate Android observations into the SDK's stable enums:
+Adaptive settings apply only to explicit multipart uploads. If a capable custom
+gateway needs multipart tuning, translate Android observations into the SDK's
+stable enums:
 
 ```kotlin
 import com.vmodal.sdk.UploadConditions
@@ -173,7 +211,7 @@ val conditions = UploadConditions(
     networkSpeed = UploadNetworkSpeed.FAST,
     deviceMemory = UploadDeviceMemory.HIGH,
 )
-val options = VideoUploadOptions(adaptiveConditions = conditions)
+val options = VideoUploadOptions(multipart = true, adaptiveConditions = conditions)
 val selected = options.resolvedFor(source.contentLength)
 ```
 
@@ -186,7 +224,7 @@ Cellular uploads use at most two concurrent parts. Fast Wi-Fi uses its fastest
 preset only on a high-memory device. The policy also increases part size when
 needed to stay below the upstream 10,000-part limit.
 
-## What the SDK handles automatically
+## What signed multipart upload handles automatically
 
 - Streaming with a 256 KiB buffer per active part
 - A streaming MD5 digest per active part
@@ -223,8 +261,9 @@ The default checkpoint store is memory-only. Configure
 
 ### Upload tuning causes validation errors
 
-Return to `VideoUploadOptions()` defaults first. Part size must be at least
-5 MiB, concurrency must be between 1 and 16, attempts between 1 and 10, and a
+Return to `VideoUploadOptions()` single-upload defaults first. For an explicit
+multipart upload, part size must be at least 5 MiB, concurrency must be between
+1 and 16, attempts between 1 and 10, and a
 multipart upload cannot exceed 10,000 parts.
 
 ## Verify the SDK
@@ -239,10 +278,11 @@ cd examples/02_search
 ```
 
 The local suite is offline and needs no emulator or credential. The live CI
-gate is `.github/workflows/sdk_android_test_release.yml`; it checks identity,
-health, search, CRUD, images, small upload, single signed video upload, and bulk
-video upload. This matches the default `sdk_python` live coverage. Multipart
-protocol behavior is verified offline until its production routes exist.
+gate is `.github/workflows/sdk_android_test_release.yml`; it runs a causally
+connected signed upload, index creation, bounded status poll, fixture search,
+index deletion, collection deletion, and absence checks, plus image and bulk
+smoke coverage. Multipart protocol behavior is verified offline until its
+production routes exist.
 
 For individual methods and response types, continue to the
 [API quick reference](../DOC_REF.md).

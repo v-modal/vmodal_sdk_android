@@ -156,7 +156,6 @@ private class SearchRepository {
 
         val authClient = Client(
             baseUrl = PUBLIC_GATEWAY_URL,
-            mode = "gateway",
             apiKeyProvider = provider,
         )
         val me = authClient.auth.me()

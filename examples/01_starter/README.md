@@ -39,16 +39,16 @@ from your VModal account.
 7. [Upload the video asynchronously](09_async_video_upload.kt).
 8. [Cancel an upload](10_cancel_upload.kt) at a lifecycle boundary.
 
-The URI source is reopenable, so the SDK can retry and upload multipart ranges
-without loading the complete video into memory.
+The URI source is reopenable, so the SDK can stream without loading the complete
+video into memory. Multipart examples require an explicitly capable gateway.
 
 ### Stage 4: make uploads production-ready
 
 9. [Upload from a blocking worker](11_worker_video_upload.kt) when using
    WorkManager.
-10. [Resume after process death](12_resumable_upload.kt) with a persistent
+10. [Resume experimental multipart after process death](12_resumable_upload.kt) with a persistent
     checkpoint store.
-11. [Select adaptive multipart settings](13_adaptive_upload.kt) from current
+11. [Select experimental adaptive multipart settings](13_adaptive_upload.kt) from current
     network and memory conditions.
 12. [Upload several videos](14_bulk_video_upload.kt).
 

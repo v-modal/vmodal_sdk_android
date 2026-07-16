@@ -8,7 +8,6 @@ fun createGatewayClient(apiToken: String): Client {
     val bootstrap = Client(
         baseUrl = PUBLIC_GATEWAY_URL,
         token = apiToken,
-        mode = "gateway",
     )
     val me = bootstrap.auth.me()
     return Client(

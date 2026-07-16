@@ -12,6 +12,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -34,7 +35,8 @@ class UploadSource(
     private val opener: () -> InputStream,
 ) {
     init {
-        if (fileName.isBlank()) throw ValidationFailed("file_name is required")
+        strMultipartValue("file name", fileName, 1_024)
+        strMultipartValue("content type", contentType, 255)
         if (contentLength < 0) throw ValidationFailed("content_length must be known for a signed upload")
     }
 
@@ -175,7 +177,16 @@ class OkHttpSignedUploadTransport(
                 handle.remove(call)
                 response.use {
                     if (!response.isSuccessful) {
-                        onFailure(ApiError("signed upload failed", response.code, response.body?.string()))
+                        val err = try {
+                            val errBody = response.body
+                            val bytes = errBody?.byteStream()?.use { input ->
+                                input.bytesBounded(errBody.contentLength(), ERROR_RESPONSE_LIMIT_BYTES)
+                            } ?: ByteArray(0)
+                            ApiError("signed upload failed", response.code, bytes.toString(StandardCharsets.UTF_8))
+                        } catch (exc: Exception) {
+                            exc
+                        }
+                        onFailure(err)
                         return
                     }
                     val etag = response.header("ETag").orEmpty().trim().trim('"')
@@ -231,10 +242,10 @@ private class StreamRequestBody(
 }
 
 internal class SignedUploadFailure(
-    cause: IOException,
+    @Suppress("UNUSED_PARAMETER") cause: IOException,
     val sentBytes: Long,
     val localMd5: String,
-) : IOException(cause.message, cause)
+) : IOException("signed upload transport error")
 
 private class LimitedInputStream(private val input: InputStream, private var left: Long) : InputStream() {
     override fun read(): Int {
@@ -295,8 +306,9 @@ class FileUploadSessionStore(private val directory: File) : UploadSessionStore {
     override fun load(key: String): Map<String, Any?>? {
         val file = file(key)
         val source = if (file.isFile) file else backup(file).takeIf { it.isFile } ?: return null
-        val raw = VmodalJson.parse(source.readText()) as? Map<*, *>
-            ?: throw IOException("upload checkpoint is invalid: ${source.path}")
+        val bytes = source.inputStream().use { it.bytesBounded(source.length(), CHECKPOINT_JSON_LIMIT_BYTES) }
+        val raw = VmodalJson.parse(bytes.toString(StandardCharsets.UTF_8)) as? Map<*, *>
+            ?: throw MalformedResponse("upload checkpoint is invalid")
         return raw.entries.associate { it.key.toString() to it.value }
     }
 
@@ -305,7 +317,10 @@ class FileUploadSessionStore(private val directory: File) : UploadSessionStore {
         val file = file(key)
         val temp = File(directory, ".${file.name}.${Thread.currentThread().id}.tmp")
         val backup = backup(file)
-        temp.writeText(VmodalJson.stringify(value))
+        val text = VmodalJson.stringify(value)
+        val size = jsonUtf8Size(text, CHECKPOINT_JSON_LIMIT_BYTES)
+        if (size > CHECKPOINT_JSON_LIMIT_BYTES) throw ResponseTooLarge(CHECKPOINT_JSON_LIMIT_BYTES, size)
+        temp.writeText(text)
         if (backup.exists() && !backup.delete()) throw IOException("cannot replace upload checkpoint backup: ${backup.path}")
         if (file.exists() && !file.renameTo(backup)) throw IOException("cannot rotate upload checkpoint: ${file.path}")
         if (!temp.renameTo(file)) {
@@ -333,6 +348,7 @@ object UploadSessionStores {
 }
 
 private const val STREAM_BUFFER_BYTES = 256 * 1024
+internal const val CHECKPOINT_JSON_LIMIT_BYTES = 1L * 1024 * 1024
 
 private fun InputStream.skipFully(offset: Long) {
     var left = offset

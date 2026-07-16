@@ -44,7 +44,6 @@ object Routes {
         const val authMe = "/auth/me"
         const val adminUsage = "/admin/usage"
         const val adminCacheStats = "/admin/cache/stats"
-        const val r2Credentials = "/get_r2_credentials/"
         const val r2UploadFile = "/upload_file/"
         const val r2UploadFolderVideo = "/upload_folder_video/"
     }

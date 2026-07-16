@@ -15,5 +15,8 @@ fun adaptiveOptions(fileSize: Long): VideoUploadOptions {
     )
     val preset = AdaptiveUploadPolicy.select(fileSize, conditions)
     println("preset=${preset.name} concurrency=${preset.maxConcurrency}")
-    return VideoUploadOptions(adaptiveConditions = conditions)
+    return VideoUploadOptions(
+        multipart = true, // Experimental: the gateway must expose every multipart route.
+        adaptiveConditions = conditions,
+    )
 }

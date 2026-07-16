@@ -2,6 +2,10 @@
 >
 > Join the V-Modal beta by [filling out the contact form](https://v-modal.com/page/contact.ts).
 
+> ### Active support in Discord
+>
+> We would love to help you build with V-Modal—come say hello in our [Discord channel](https://discord.gg/CRNsdJHg6)!
+
 <div align="center">
 
 <img src="assets/vmodal-banner.svg" alt="V-Modal Android SDK" width="760"/>
@@ -42,8 +46,9 @@ val result = sdk.searches.searchVideo(
 ```
 
 That is the whole idea: upload videos into collections, then find moments in
-them with natural language. The SDK also manages collections, uploads large
-files with resumable multipart streaming, and plays nicely with
+them with natural language. The SDK also manages collections, uploads files
+with signed streaming, offers explicit experimental multipart support for
+capable gateways, and plays nicely with
 `Dispatchers.IO`, `lifecycleScope`, and WorkManager.
 
 Release artifacts are configured to use the Maven Central coordinates
@@ -61,6 +66,26 @@ available for contributors.
 
 > ⚠️ Never bundle a real API key in source, `BuildConfig`, resources, or
 > `AndroidManifest.xml`. The parent application must inject it at runtime.
+
+## 🔒 Production security expectations
+
+Use the authenticated gateway with a user-scoped, revocable, short-lived
+credential obtained from your application's authenticated backend. Provider
+master keys and token-minting secrets must never reach the APK. `mode =
+"gateway"` is the default, and gateway requests omit caller-supplied user,
+tenant, and email headers. Use `Client.unsafeDirect(...)` only for a trusted
+private network whose downstream service
+independently authenticates and authorizes identity headers; it is unsafe as a
+caller-trusted identity boundary on a public network.
+
+The SDK automatically retries only `GET` and `HEAD`. `POST`, `PUT`, `PATCH`,
+and `DELETE` are sent once, even when a response is lost, unless the separate
+signed multipart protocol can reconcile a part by status and ETag. Success
+bodies are bounded to 8 MiB for JSON/text and 64 MiB for bytes; error bodies are
+bounded to 1 MiB. JSON and upload checkpoints are strictly parsed, and
+configuration/error strings do not print tokens, URLs, identities, or response
+bodies. See the [upload and runtime contract](docs/sdk_doc.md) and [credential
+lifecycle](docs/manage_api_key.md).
 
 ## 🚀 Quick start
 
@@ -304,13 +329,12 @@ flowchart LR
    [example 09](examples/01_starter/09_async_video_upload.kt).
 4. Keep the returned `UploadHandle` if the UI needs a Cancel action.
 
-The SDK streams the video instead of loading the whole file into memory. Files
-of at least 100 MiB select multipart upload by default.
-
-**TODO: production does not currently expose the multipart route family. Pass
-`VideoUploadOptions(multipart = false)` for production uploads until those
-routes are available. The multipart implementation is retained for Python SDK
-parity and is covered by offline regression tests.**
+The SDK streams the video instead of loading the whole file into memory. Every
+file size uses the supported single signed-URL flow by default. Multipart is an
+experimental explicit opt-in with `VideoUploadOptions(multipart = true)` for a
+gateway that exposes the complete multipart route family. A gateway without
+that capability fails with `FeatureDisabled` instead of silently selecting a
+missing API by file size.
 
 ## 🛠️ Troubleshooting
 
@@ -349,7 +373,8 @@ or API token is required. Maintainers can follow the
 All typed response objects expose `raw: Map<String, Any?>` for server fields
 that do not yet have a typed property. All SDK failures derive from `SdkError`;
 applications can handle `AuthError`, `ValidationFailed`, `ApiError`, and
-`FeatureDisabled` separately when needed.
+`FeatureDisabled` separately when needed. Transport, size, and JSON failures are
+available as `TransportError`, `ResponseTooLarge`, and `MalformedResponse`.
 
 ---
 
@@ -363,5 +388,7 @@ applications can handle `AuthError`, `ValidationFailed`, `ApiError`, and
 Built for Kotlin developers, by [**v-modal.com**](https://v-modal.com) 💜
 
 <sub>Logo attributions in [assets/README.md](assets/README.md).</sub>
+
+<sub>Licensed under the [Apache License 2.0](LICENSE).</sub>
 
 </div>

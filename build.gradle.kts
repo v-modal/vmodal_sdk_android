@@ -1,9 +1,11 @@
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinJvm
+import org.gradle.jvm.tasks.Jar
 
 plugins {
     kotlin("jvm") version "1.9.24"
     id("com.vanniktech.maven.publish") version "0.34.0"
+    id("project-report")
 }
 
 group = "com.vmodal"
@@ -11,6 +13,15 @@ version = "1.0.0"
 
 dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.moshi:moshi:1.15.2")
+}
+
+tasks.withType<Jar>().configureEach {
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
+    from(layout.projectDirectory.file("LICENSE")) {
+        into("META-INF")
+    }
 }
 
 kotlin {
@@ -52,6 +63,19 @@ mavenPublishing {
             url.set("https://github.com/v-modal/vmodal_sdk_android")
             connection.set("scm:git:git://github.com/v-modal/vmodal_sdk_android.git")
             developerConnection.set("scm:git:ssh://git@github.com/v-modal/vmodal_sdk_android.git")
+        }
+    }
+}
+
+val githubPackagesUser = providers.environmentVariable("GITHUB_PACKAGES_USERNAME")
+val githubPackagesToken = providers.environmentVariable("GITHUB_PACKAGES_TOKEN")
+if (githubPackagesUser.isPresent && githubPackagesToken.isPresent) {
+    publishing.repositories.maven {
+        name = "GitHubPackages"
+        url = uri("https://maven.pkg.github.com/v-modal/vmodal_sdk_android")
+        credentials {
+            username = githubPackagesUser.get()
+            setPassword(githubPackagesToken.get())
         }
     }
 }

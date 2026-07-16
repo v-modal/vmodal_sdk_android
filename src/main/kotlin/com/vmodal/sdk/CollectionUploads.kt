@@ -14,7 +14,8 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 data class VideoUploadOptions(
-    val multipart: Boolean? = null,
+    val multipart: Boolean = false,
+    /** Retained for source compatibility. Upload strategy is never selected by file size. */
     val multipartThresholdBytes: Long = 100L * 1024 * 1024,
     val partSizeBytes: Long = 64L * 1024 * 1024,
     val maxConcurrency: Int = 4,
@@ -25,6 +26,7 @@ data class VideoUploadOptions(
     val adaptiveConditions: UploadConditions? = null,
 ) {
     fun resolvedFor(size: Long): VideoUploadOptions {
+        if (!multipart) return this
         val conditions = adaptiveConditions ?: return this
         val preset = AdaptiveUploadPolicy.select(size, conditions)
         return copy(
@@ -36,12 +38,12 @@ data class VideoUploadOptions(
     }
 
     fun validate(size: Long) {
-        if (multipartThresholdBytes <= 0) throw ValidationFailed("multipart_threshold_bytes must be positive")
+        if (!multipart) return
         if (partSizeBytes < 5L * 1024 * 1024) throw ValidationFailed("part_size_bytes must be at least 5 MiB")
         if (maxConcurrency !in 1..16) throw ValidationFailed("max_concurrency must be in 1..16")
         if (maxPartAttempts !in 1..10) throw ValidationFailed("max_part_attempts must be in 1..10")
         if (partTimeoutSeconds <= 0) throw ValidationFailed("part_timeout_seconds must be positive")
-        if (multipart == true && size <= 0) throw ValidationFailed("multipart size must be positive")
+        if (size <= 0) throw ValidationFailed("multipart size must be positive")
         if (partCount(size, partSizeBytes) > 10_000) throw ValidationFailed("part_size_bytes would create more than 10,000 parts")
     }
 }
@@ -148,9 +150,15 @@ private fun CollectionsResource.videoUploadRun(
     handle: UploadHandle,
     onProgress: (UploadProgress) -> Unit,
 ): VideoUploadResponse {
-    val multipart = options.multipart ?: (source.contentLength >= options.multipartThresholdBytes)
-    return if (multipart) {
-        multipartUpload(source, collectionName, subCollectionName, mode, modality, ttl, options, handle, onProgress)
+    return if (options.multipart) {
+        try {
+            multipartUpload(source, collectionName, subCollectionName, mode, modality, ttl, options, handle, onProgress)
+        } catch (exc: ApiError) {
+            if (exc.statusCode != 404) throw exc
+            throw FeatureDisabled(
+                "experimental multipart upload is unavailable on this gateway; retry with VideoUploadOptions(multipart = false)"
+            ).also { it.addSuppressed(exc) }
+        }
     } else {
         singleUpload(source, collectionName, subCollectionName, mode, modality, ttl, handle, onProgress)
     }

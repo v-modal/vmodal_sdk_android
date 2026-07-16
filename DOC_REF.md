@@ -34,8 +34,9 @@ mode is for environments where the caller already has trusted identity values.
 | Entrypoint | Purpose |
 |---|---|
 | `Client(cfg, transport, signedUploads)` | Construct from an `SdkConfig`, with optional injectable transports. |
-| `Client(baseUrl, userId, tenantId, email, token, timeoutMillis, mode, maxRetries, ...)` | Construct from explicit values. |
+| `Client(baseUrl, userId, tenantId, email, token, timeoutMillis, maxRetries, ...)` | Construct an authenticated gateway client from explicit values. |
 | `Client.fromEnv(env, transport, signedUploads, resolveIdentity)` | Construct from environment values and optionally resolve `auth.me()`. |
+| `Client.unsafeDirect(baseUrl, userId, ...)` | Explicit trusted-network escape hatch; never use as a public identity boundary. |
 | `client.cfg` / `client.http` | Effective configuration and low-level HTTP client. |
 | `client.auth` | `AuthResource`. |
 | `client.searches` | `SearchesResource`. |
@@ -122,6 +123,10 @@ Upload types and helpers:
 - `SignedUploadTransport.enqueue(...)` and `OkHttpSignedUploadTransport(...)`
 - `SignedUploadResult(statusCode, etag, localMd5)`
 
+`VideoUploadOptions()` always selects the single signed-URL flow. Setting
+`multipart = true` is an experimental opt-in for gateways that expose every
+multipart route; missing capability fails with `FeatureDisabled`.
+
 Adaptive policy entrypoints:
 
 - `UploadConditions(networkType, networkSpeed, deviceMemory)`
@@ -157,12 +162,13 @@ Adaptive policy entrypoints:
 
 | Entrypoint | Returns |
 |---|---|
-| `client.r2.getCredentials(dirPrefix = "")` | `R2CredentialsResponse` |
 | `client.r2.presignUploadFile(mode, groupName, streamName, modality, filename, expiresIn)` | `PresignedUploadResponse` |
 | `client.r2.presignUploadFolderVideo(mode, groupName, streamName, filenames, expiresIn)` | `PresignedFolderResponse` |
 
 Prefer the signed `videoUpload*` entrypoints for video uploads; they manage PUT,
 multipart upload, retries, completion, and resume for the caller.
+Presign helpers default to 900 seconds. Raw R2 session credentials are not part
+of the public mobile SDK surface.
 
 ## Images
 
@@ -213,7 +219,7 @@ classes are:
 - Index/admin: `IndexationJobsListResponse`, `IndexationSubmitResponse`,
   `IndexationStatusResponse`, `IndexationDeleteResponse`,
   `AdminUserStatsResponse`, `UsageUserDetail`, and `CacheStats`
-- R2/images: `R2CredentialsResponse`, `PresignedUploadResponse`,
+- R2/images: `PresignedUploadResponse`,
   `PresignedFolderItem`, `PresignedFolderResponse`, `ImageUrlResponse`,
   `ImageUrlBulkResponse`, `ImageGetBulkResponse`, `ImageResponse`,
   `FullPathImageResponse`, and `ImageBulkResponse`

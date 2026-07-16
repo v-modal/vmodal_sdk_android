@@ -1,5 +1,7 @@
 package com.vmodal.sdk
 
+import java.io.IOException
+
 class VmodalHttp(
     val cfg: SdkConfig,
     val transport: VmodalTransport = HttpUrlConnectionTransport(cfg),
@@ -7,10 +9,12 @@ class VmodalHttp(
     fun headers(forceToken: Boolean = false, requireUserId: Boolean = true): Map<String, String> {
         val out = linkedMapOf<String, String>()
         val userId = cfg.normalizedUserId
-        if (requireUserId && userId.isBlank()) throw AuthError("user_id is required")
-        if (userId.isNotBlank()) out["X-User-Id"] = strHeaderValue("user_id", userId)
-        if (cfg.normalizedTenantId.isNotBlank()) out["X-Tenant-Id"] = strHeaderValue("tenant_id", cfg.normalizedTenantId)
-        if (cfg.normalizedEmail.isNotBlank()) out["X-User-Email"] = strHeaderValue("email", cfg.normalizedEmail)
+        if (cfg.normalizedMode == "direct") {
+            if (requireUserId && userId.isBlank()) throw AuthError("user_id is required")
+            if (userId.isNotBlank()) out["X-User-Id"] = strHeaderValue("user_id", userId)
+            if (cfg.normalizedTenantId.isNotBlank()) out["X-Tenant-Id"] = strHeaderValue("tenant_id", cfg.normalizedTenantId)
+            if (cfg.normalizedEmail.isNotBlank()) out["X-User-Email"] = strHeaderValue("email", cfg.normalizedEmail)
+        }
         if (forceToken || cfg.normalizedMode != "direct") {
             val apiKey = cfg.currentApiKey()
             if (apiKey.isBlank()) throw AuthError("API key is required")
@@ -33,7 +37,14 @@ class VmodalHttp(
         path: String,
         json: Any? = null,
         params: Map<String, Any?> = emptyMap(),
-    ): ByteArray = execute(method, path, json, params = params, headers = headers()).bytes
+    ): ByteArray = execute(
+        method,
+        path,
+        json,
+        params = params,
+        headers = headers(),
+        responseMode = VmodalResponseMode.BYTES,
+    ).bytes
 
     fun requestUsers(
         method: String,
@@ -55,45 +66,44 @@ class VmodalHttp(
         files: List<VmodalFilePart> = emptyList(),
         params: Map<String, Any?> = emptyMap(),
         headers: Map<String, String>,
+        responseMode: VmodalResponseMode = VmodalResponseMode.TEXT,
     ): VmodalResponse {
         strRequireSameOrigin(path, cfg.normalizedBaseUrl)
+        val normalizedMethod = method.uppercase()
+        val canAutoRetry = normalizedMethod == "GET" || normalizedMethod == "HEAD"
         val attempts = cfg.normalizedMaxRetries + 1
-        var last: RuntimeException? = null
+        val request = VmodalRequest(normalizedMethod, path, params, headers, json, data, files).also {
+            it.responseMode = responseMode
+        }
+        var last: IOException? = null
         repeat(attempts) { idx ->
             try {
-                val res = transport.execute(VmodalRequest(method.uppercase(), path, params, headers, json, data, files))
-                if (res.statusCode in RETRY_CODES && idx + 1 < attempts) {
+                val res = transport.execute(request)
+                if (canAutoRetry && res.statusCode in RETRY_CODES && idx + 1 < attempts) {
                     retrySleep(idx)
                     return@repeat
                 }
                 raiseForStatus(res)
                 return res
-            } catch (exc: AuthError) {
-                throw exc
-            } catch (exc: ValidationFailed) {
-                throw exc
-            } catch (exc: ApiError) {
+            } catch (exc: IOException) {
                 last = exc
-                if (exc.statusCode in RETRY_CODES && idx + 1 < attempts) {
+                if (canAutoRetry && idx + 1 < attempts) {
                     retrySleep(idx)
                     return@repeat
                 }
-                throw exc
-            } catch (exc: RuntimeException) {
-                last = exc
-                if (idx + 1 < attempts && exc::class.simpleName.orEmpty().contains("timeout", true)) {
-                    retrySleep(idx)
-                    return@repeat
-                }
-                throw ApiError("transport error", body = exc.message)
+                throw TransportError(exc)
             }
         }
-        throw last ?: ApiError("request failed")
+        throw TransportError(last ?: IOException("request failed"))
     }
 
     private fun raiseForStatus(response: VmodalResponse) {
         if (response.statusCode in 200..299) return
-        val body = response.json ?: response.body
+        val contentType = response.headers.entries.firstOrNull { it.key.equals("Content-Type", true) }
+            ?.value?.joinToString(";").orEmpty()
+        val looksJson = "json" in contentType.lowercase() || response.body.trimStart().startsWith('{') ||
+            response.body.trimStart().startsWith('[')
+        val body = if (response.body.isEmpty()) null else if (looksJson) response.json else response.body
         when (response.statusCode) {
             401 -> throw AuthError("authentication failed", statusCode = 401, body = body)
             422 -> throw ValidationFailed(
@@ -106,7 +116,14 @@ class VmodalHttp(
         }
     }
 
-    private fun retrySleep(idx: Int) = Thread.sleep(50L * (idx + 1))
+    private fun retrySleep(idx: Int) {
+        try {
+            Thread.sleep(50L * (idx + 1))
+        } catch (exc: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw ApiError("request interrupted").also { it.initCause(exc) }
+        }
+    }
 
     private companion object {
         val RETRY_CODES = setOf(500, 502, 503, 504)
