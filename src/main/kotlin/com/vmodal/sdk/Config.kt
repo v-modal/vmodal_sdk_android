@@ -2,10 +2,30 @@ package com.vmodal.sdk
 
 import java.util.Base64
 
+/** @suppress */
 const val PUBLIC_GATEWAY_URL_HASH = "aHR0cHM6Ly9zZWFyY2hhcGktdGVzdC52LW1vZGFsLmNvbQ=="
+/** @suppress */
 val PUBLIC_GATEWAY_URL = String(Base64.getDecoder().decode(PUBLIC_GATEWAY_URL_HASH), Charsets.UTF_8)
+/** @suppress */
 const val DEV_GATEWAY_URL = "http://127.0.0.1:3099"
 
+/**
+ * Immutable client configuration.
+ *
+ * Credentials may be supplied by [apiKeyProvider] so long-lived clients can
+ * observe rotation without being rebuilt. Timeouts must be positive and retry
+ * counts must not be negative.
+ *
+ * @property baseUrl service base URL
+ * @property userId optional resolved user identifier
+ * @property tenantId optional resolved tenant identifier
+ * @property email optional resolved user email
+ * @property token static API credential
+ * @property timeoutMillis request timeout in milliseconds
+ * @property mode gateway or trusted-direct mode
+ * @property maxRetries maximum safe-read retries
+ * @property apiKeyProvider optional rotating credential provider
+ */
 data class SdkConfig(
     val baseUrl: String = PUBLIC_GATEWAY_URL,
     val userId: String = "",
@@ -25,12 +45,19 @@ data class SdkConfig(
         }
     }
 
+    /** Normalized connection mode. */
     val normalizedMode: String = mode.trim().lowercase().ifBlank { "gateway" }
+    /** Normalized service base URL. */
     val normalizedBaseUrl: String = strGatewayBaseUrl(baseUrl, normalizedMode)
+    /** Trimmed user identifier. */
     val normalizedUserId: String = userId.trim()
+    /** Trimmed tenant identifier. */
     val normalizedTenantId: String = tenantId.trim()
+    /** Trimmed email address. */
     val normalizedEmail: String = email.trim()
+    /** Trimmed static credential. */
     val normalizedToken: String = token.trim()
+    /** Validated safe-read retry count. */
     val normalizedMaxRetries: Int = maxRetries
 
     internal fun currentApiKey(): String {
@@ -38,6 +65,7 @@ data class SdkConfig(
         return if (key.isBlank()) "" else strApiKey(key)
     }
 
+    /** Returns redacted configuration diagnostics. */
     override fun toString(): String = buildString {
         append("SdkConfig(baseUrlConfigured=").append(baseUrl.isNotBlank())
         append(", userIdConfigured=").append(userId.isNotBlank())
@@ -51,7 +79,9 @@ data class SdkConfig(
         append(')')
     }
 
+    /** Environment-based configuration factory. */
     companion object {
+        /** Builds validated configuration from an environment map plus explicit overrides. */
         fun fromEnv(
             env: Map<String, String> = System.getenv(),
             baseUrl: String? = null,
@@ -91,6 +121,7 @@ data class SdkConfig(
     }
 }
 
+/** @suppress */
 fun strGatewayBaseUrl(baseUrl: String, mode: String = ""): String {
     val base = baseUrl.trim().trimEnd('/')
     if (base.isBlank() || mode.trim().lowercase() != "gateway") return base
@@ -98,6 +129,7 @@ fun strGatewayBaseUrl(baseUrl: String, mode: String = ""): String {
     return if (base.endsWith(suffix)) base else base + suffix
 }
 
+/** @suppress */
 fun strUsersBaseUrl(baseUrl: String): String {
     val base = baseUrl.trim().trimEnd('/')
     val suffix = "/api/v1/proxy/search_api"

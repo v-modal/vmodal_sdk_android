@@ -6,24 +6,46 @@ import androidx.lifecycle.viewModelScope
 import com.vmodal.sdk.Client
 import com.vmodal.sdk.MutableApiKeyProvider
 import com.vmodal.sdk.PUBLIC_GATEWAY_URL
+import com.vmodal.sdk.UploadSource
+import com.vmodal.sdk.videoUploadAsync
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+
+enum class WorkflowAction {
+    UPLOAD,
+    INDEX,
+    SEARCH,
+}
 
 data class SearchImage(
     val id: String,
     val url: String,
     val title: String,
     val filename: String,
+    val stream: String,
+    val timestamp: String,
+    val score: String,
 )
 
 data class SearchUiState(
-    val loading: Boolean = false,
+    val action: WorkflowAction? = null,
+    val selectedFile: String = "",
+    val uploadProgress: Int = 0,
+    val uploadedFile: String = "",
+    val indexJobId: String = "",
+    val indexStatus: String = "",
+    val indexReady: Boolean = false,
     val searched: Boolean = false,
     val images: List<SearchImage> = emptyList(),
     val total: Int = 0,
@@ -37,10 +59,159 @@ private data class SearchOutput(
     val elapsedMs: Double,
 )
 
+private data class IndexOutput(val jobId: String, val status: String)
+
 class SearchViewModel private constructor(private val repo: SearchRepository) : ViewModel() {
     private val mutableState = MutableStateFlow(SearchUiState())
     val state: StateFlow<SearchUiState> = mutableState.asStateFlow()
-    private var searchJob: Job? = null
+    private var workJob: Job? = null
+    private var source: UploadSource? = null
+
+    fun selectVideo(value: UploadSource) {
+        source = value
+        mutableState.update {
+            it.copy(
+                selectedFile = value.fileName,
+                uploadProgress = 0,
+                uploadedFile = "",
+                indexJobId = "",
+                indexStatus = "",
+                indexReady = false,
+                searched = false,
+                images = emptyList(),
+                total = 0,
+                elapsedMs = 0.0,
+                error = "",
+            )
+        }
+    }
+
+    fun selectionError(message: String) {
+        source = null
+        mutableState.update { it.copy(selectedFile = "", error = message) }
+    }
+
+    fun coordinatesChanged() {
+        mutableState.update {
+            it.copy(
+                uploadProgress = 0,
+                uploadedFile = "",
+                indexJobId = "",
+                indexStatus = "",
+                indexReady = false,
+                searched = false,
+                images = emptyList(),
+                total = 0,
+                elapsedMs = 0.0,
+                error = "",
+            )
+        }
+    }
+
+    fun upload(apiKey: String, group: String, stream: String) {
+        val cleanKey = apiKey.trim()
+        val cleanGroup = group.trim()
+        val cleanStream = stream.trim()
+        val input = source
+        val validation = strValidation(cleanKey, cleanGroup, cleanStream)
+            .ifBlank { if (input == null) "Choose a video first." else "" }
+        if (validation.isNotBlank()) {
+            mutableState.update { it.copy(error = validation) }
+            return
+        }
+
+        workJob?.cancel()
+        workJob = viewModelScope.launch {
+            mutableState.update {
+                it.copy(
+                    action = WorkflowAction.UPLOAD,
+                    uploadProgress = 0,
+                    uploadedFile = "",
+                    indexJobId = "",
+                    indexStatus = "",
+                    indexReady = false,
+                    searched = false,
+                    images = emptyList(),
+                    total = 0,
+                    elapsedMs = 0.0,
+                    error = "",
+                )
+            }
+            try {
+                val fileName = withContext(Dispatchers.IO) {
+                    repo.upload(cleanKey, requireNotNull(input), cleanGroup, cleanStream) { progress ->
+                        mutableState.update { it.copy(uploadProgress = progress) }
+                    }
+                }
+                mutableState.update {
+                    it.copy(action = null, uploadProgress = 100, uploadedFile = fileName)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                mutableState.update {
+                    it.copy(action = null, error = e.message ?: "Upload failed.")
+                }
+            }
+        }
+    }
+
+    fun createIndex(apiKey: String, group: String, stream: String) {
+        val cleanKey = apiKey.trim()
+        val cleanGroup = group.trim()
+        val cleanStream = stream.trim()
+        val validation = strValidation(cleanKey, cleanGroup, cleanStream)
+        if (validation.isNotBlank()) {
+            mutableState.update { it.copy(error = validation) }
+            return
+        }
+
+        workJob?.cancel()
+        workJob = viewModelScope.launch {
+            mutableState.update {
+                it.copy(
+                    action = WorkflowAction.INDEX,
+                    indexJobId = "",
+                    indexStatus = "submitting",
+                    indexReady = false,
+                    searched = false,
+                    images = emptyList(),
+                    total = 0,
+                    elapsedMs = 0.0,
+                    error = "",
+                )
+            }
+            try {
+                val created = withContext(Dispatchers.IO) {
+                    repo.createIndex(cleanKey, cleanGroup, cleanStream)
+                }
+                require(created.jobId.isNotBlank()) { "Index creation returned no job ID." }
+                mutableState.update {
+                    it.copy(indexJobId = created.jobId, indexStatus = created.status.ifBlank { "queued" })
+                }
+
+                val end = System.currentTimeMillis() + INDEX_TIMEOUT_MS
+                while (System.currentTimeMillis() <= end) {
+                    val current = withContext(Dispatchers.IO) { repo.indexStatus(created.jobId) }
+                    val status = current.status.trim().lowercase().ifBlank { "unknown" }
+                    mutableState.update { it.copy(indexStatus = status) }
+                    if (status in INDEX_OK) {
+                        mutableState.update { it.copy(action = null, indexReady = true) }
+                        return@launch
+                    }
+                    require(status !in INDEX_FAIL) { "Index job ${created.jobId} ended with $status." }
+                    delay(INDEX_POLL_MS)
+                }
+                error("Indexing timed out after 30 minutes.")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                mutableState.update {
+                    it.copy(action = null, error = e.message ?: "Index creation failed.")
+                }
+            }
+        }
+    }
 
     fun search(apiKey: String, query: String, group: String, stream: String) {
         val cleanKey = apiKey.trim()
@@ -48,43 +219,58 @@ class SearchViewModel private constructor(private val repo: SearchRepository) : 
         val cleanGroup = group.trim()
         val cleanStream = stream.trim()
         val validation = when {
-            cleanKey.isBlank() -> "Enter a runtime API key."
+            strValidation(cleanKey, cleanGroup, cleanStream).isNotBlank() ->
+                strValidation(cleanKey, cleanGroup, cleanStream)
             cleanQuery.isBlank() -> "Enter search text."
-            cleanGroup.isBlank() -> "Enter a collection name."
-            cleanStream.isBlank() -> "Enter a stream name."
             else -> ""
         }
         if (validation.isNotBlank()) {
-            mutableState.value = SearchUiState(searched = true, error = validation)
+            mutableState.update { it.copy(searched = true, error = validation) }
             return
         }
 
-        searchJob?.cancel()
-        searchJob = viewModelScope.launch {
-            mutableState.value = SearchUiState(loading = true)
+        workJob?.cancel()
+        workJob = viewModelScope.launch {
+            mutableState.update {
+                it.copy(
+                    action = WorkflowAction.SEARCH,
+                    searched = false,
+                    images = emptyList(),
+                    total = 0,
+                    elapsedMs = 0.0,
+                    error = "",
+                )
+            }
             try {
                 val output = withContext(Dispatchers.IO) {
                     repo.search(cleanKey, cleanQuery, cleanGroup, cleanStream)
                 }
-                mutableState.value = SearchUiState(
-                    searched = true,
-                    images = output.images,
-                    total = output.total,
-                    elapsedMs = output.elapsedMs,
-                )
+                mutableState.update {
+                    it.copy(
+                        action = null,
+                        searched = true,
+                        images = output.images,
+                        total = output.total,
+                        elapsedMs = output.elapsedMs,
+                    )
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                mutableState.value = SearchUiState(
-                    searched = true,
-                    error = e.message ?: "Search failed.",
-                )
+                mutableState.update {
+                    it.copy(
+                        action = null,
+                        searched = true,
+                        error = e.message ?: "Search failed.",
+                    )
+                }
             }
         }
     }
 
     fun clearCredentials() {
-        searchJob?.cancel()
+        workJob?.cancel()
+        source = null
         repo.clearCredentials()
         mutableState.value = SearchUiState()
     }
@@ -95,6 +281,18 @@ class SearchViewModel private constructor(private val repo: SearchRepository) : 
     }
 
     companion object {
+        private val INDEX_OK = setOf("success", "succeeded", "done", "completed", "ok")
+        private val INDEX_FAIL = setOf("failed", "failure", "error", "cancelled", "canceled", "dead_letter")
+        private const val INDEX_POLL_MS = 5_000L
+        private const val INDEX_TIMEOUT_MS = 30 * 60 * 1_000L
+
+        private fun strValidation(apiKey: String, group: String, stream: String): String = when {
+            apiKey.isBlank() -> "Enter a runtime API key."
+            group.isBlank() -> "Enter a collection name."
+            stream.isBlank() -> "Enter a stream name."
+            else -> ""
+        }
+
         fun factory(): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
@@ -108,8 +306,65 @@ private class SearchRepository {
     private var keys: MutableApiKeyProvider? = null
     private var sdk: Client? = null
 
+    suspend fun upload(
+        apiKey: String,
+        source: UploadSource,
+        group: String,
+        stream: String,
+        onProgress: (Int) -> Unit,
+    ): String = suspendCancellableCoroutine { continuation ->
+        val handle = client(apiKey).collections.videoUploadAsync(
+            source = source,
+            collectionName = group,
+            subCollectionName = stream,
+            mode = "vid_file",
+            modality = "vid_raw",
+            onProgress = {
+                if (continuation.isActive) onProgress(it.percent)
+            },
+            onSuccess = { result ->
+                if (continuation.isActive) {
+                    if (result.uploaded) {
+                        continuation.resume(result.fileName.ifBlank { source.fileName })
+                    } else {
+                        continuation.resumeWithException(
+                            IllegalStateException("Upload did not complete: ${result.raw}"),
+                        )
+                    }
+                }
+            },
+            onFailure = { error ->
+                if (continuation.isActive) continuation.resumeWithException(error)
+            },
+        )
+        continuation.invokeOnCancellation { handle.cancel() }
+    }
+
+    fun createIndex(apiKey: String, group: String, stream: String): IndexOutput {
+        val result = client(apiKey).indexes.createIndex(
+            mode = "vid_file",
+            groupName = group,
+            streamName = stream,
+            indexType = "vid_img_emb",
+            modality = "vid_img_emb",
+            version = "new_version",
+            reProcess = true,
+        )
+        return IndexOutput(result.jobId, result.status)
+    }
+
+    fun indexStatus(jobId: String): IndexOutput {
+        val result = requireNotNull(sdk) { "Authenticate before checking index status." }
+            .indexes.indexStatus(jobId)
+        return IndexOutput(result.jobId.ifBlank { jobId }, result.status)
+    }
+
     fun search(apiKey: String, query: String, group: String, stream: String): SearchOutput {
         val client = client(apiKey)
+        val item = client.collections.listGroups("vid_file").findGroup(group, "vid_file")
+            ?: error("Collection $group is not available for this API key. Choose a listed video collection.")
+        val version = item.latestLancedbVersion
+            ?: error("Collection $group has no advertised LanceDB index version. Finish its image index before searching.")
         val result = client.searches.searchVideo(
             queryText = query,
             mode = "vid_file",
@@ -117,6 +372,7 @@ private class SearchRepository {
             streamName = stream,
             searchSources = listOf("ocr", "asr", "image"),
             limit = 50,
+            versionLancedb = version,
         )
 
         val candidates = result.data.mapNotNull(::stringMap).mapNotNull { hit ->
@@ -143,6 +399,9 @@ private class SearchRepository {
                 url = url,
                 title = title,
                 filename = filename,
+                stream = firstText(hit, "stream_name").ifBlank { stream },
+                timestamp = stamp,
+                score = firstText(hit, "score", "similarity", "image_score", "text_score"),
             )
         }
         return SearchOutput(images, result.cntTotal, result.executionTimeMs)

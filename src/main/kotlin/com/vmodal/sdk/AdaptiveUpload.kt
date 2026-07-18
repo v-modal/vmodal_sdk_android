@@ -1,17 +1,36 @@
 package com.vmodal.sdk
 
+/** Caller-observed network transport used by adaptive upload policy. */
 enum class UploadNetworkType { WIFI, CELLULAR, UNKNOWN }
 
+/** Coarse caller-observed network speed. */
 enum class UploadNetworkSpeed { SLOW, STANDARD, FAST, UNKNOWN }
 
+/** Coarse memory capacity used to limit concurrent upload work. */
 enum class UploadDeviceMemory { LOW, STANDARD, HIGH }
 
+/**
+ * Platform observations supplied to [AdaptiveUploadPolicy].
+ *
+ * @property networkType active connection type
+ * @property networkSpeed observed connection speed
+ * @property deviceMemory device memory tier
+ */
 data class UploadConditions(
     val networkType: UploadNetworkType = UploadNetworkType.UNKNOWN,
     val networkSpeed: UploadNetworkSpeed = UploadNetworkSpeed.UNKNOWN,
     val deviceMemory: UploadDeviceMemory = UploadDeviceMemory.STANDARD,
 )
 
+/**
+ * Resolved immutable multipart tuning values.
+ *
+ * @property name stable preset name
+ * @property partSizeBytes target bytes per part
+ * @property maxConcurrency maximum parallel parts
+ * @property maxPartAttempts maximum attempts per part
+ * @property partTimeoutSeconds timeout for each part
+ */
 data class AdaptiveUploadPreset(
     val name: String,
     val partSizeBytes: Long,
@@ -22,6 +41,7 @@ data class AdaptiveUploadPreset(
 
 /** Pure policy: callers translate Android observations into [UploadConditions]. */
 object AdaptiveUploadPolicy {
+    /** Selects a deterministic preset for [sizeBytes] and [conditions]. */
     fun select(sizeBytes: Long, conditions: UploadConditions): AdaptiveUploadPreset {
         if (sizeBytes < 0) throw ValidationFailed("size_bytes must not be negative")
         val tier = when {

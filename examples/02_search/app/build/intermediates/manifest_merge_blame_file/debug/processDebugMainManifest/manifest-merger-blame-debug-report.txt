@@ -31,8 +31,8 @@
 21-->[androidx.core:core:1.13.0] /home/runner/.gradle/caches/transforms-4/fb3b62878288213cf5e839019310697a/transformed/core-1.13.0/AndroidManifest.xml:28:18-86
 22        android:debuggable="true"
 23        android:extractNativeLibs="false"
-24        android:label="VModal Search"
-24-->/home/runner/work/vmx_api/vmx_api/sdk_android/examples/02_search/app/src/main/AndroidManifest.xml:7:9-38
+24        android:label="VModal Upload &amp; Search"
+24-->/home/runner/work/vmx_api/vmx_api/sdk_android/examples/02_search/app/src/main/AndroidManifest.xml:7:9-51
 25        android:supportsRtl="true"
 25-->/home/runner/work/vmx_api/vmx_api/sdk_android/examples/02_search/app/src/main/AndroidManifest.xml:8:9-35
 26        android:theme="@android:style/Theme.Material.Light.NoActionBar" >

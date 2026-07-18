@@ -21,7 +21,7 @@
         android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:debuggable="true"
         android:extractNativeLibs="false"
-        android:label="VModal Search"
+        android:label="VModal Upload &amp; Search"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar" >
         <activity

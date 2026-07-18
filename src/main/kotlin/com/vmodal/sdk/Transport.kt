@@ -10,10 +10,21 @@ import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 
+/** Default maximum structured response size. */
 const val JSON_RESPONSE_LIMIT_BYTES = 8L * 1024 * 1024
+/** Default maximum error response size. */
 const val ERROR_RESPONSE_LIMIT_BYTES = 1L * 1024 * 1024
+/** Default maximum in-memory binary response size. */
 const val BINARY_RESPONSE_LIMIT_BYTES = 64L * 1024 * 1024
 
+/**
+ * Reopenable multipart file part used by low-level collection helpers.
+ *
+ * @property fieldName multipart form field name
+ * @property fileName transmitted file name
+ * @property contentLength exact byte length
+ * @property contentType media type sent for the part
+ */
 class VmodalFilePart(
     val fieldName: String,
     val fileName: String,
@@ -30,12 +41,25 @@ class VmodalFilePart(
 
     // A reopenable stream keeps multipart uploads retryable without retaining the file in heap.
     // Android callers can pass { contentResolver.openInputStream(uri)!! } as the opener.
+    /** Creates an in-memory part. Prefer the streaming constructor for large data. */
     constructor(fieldName: String, fileName: String, bytes: ByteArray, contentType: String = "application/octet-stream") :
         this(fieldName, fileName, bytes.size.toLong(), contentType, { bytes.inputStream() })
 
+    /** Opens a new stream. The caller owns and closes the returned stream. */
     fun open(): InputStream = opener()
 }
 
+/**
+ * Transport-neutral request value used by injectable [VmodalTransport] implementations.
+ *
+ * @property method HTTP method
+ * @property path relative SDK path or validated absolute URL
+ * @property queryParameters URL query values
+ * @property headers request headers
+ * @property jsonBody optional structured body
+ * @property formFields optional form body
+ * @property files optional multipart files
+ */
 data class VmodalRequest(
     val method: String,
     val path: String,
@@ -47,6 +71,7 @@ data class VmodalRequest(
 ) {
     internal var responseMode: VmodalResponseMode = VmodalResponseMode.TEXT
 
+    /** Returns redacted request-shape diagnostics. */
     override fun toString(): String = buildString {
         append("VmodalRequest(method=").append(method)
         append(", pathType=").append(if (strIsAbsoluteHttpUrl(path)) "absolute" else "relative")
@@ -59,30 +84,44 @@ data class VmodalRequest(
     }
 }
 
+/**
+ * Bounded transport response with lazy structured decoding.
+ *
+ * @property statusCode HTTP response status
+ * @property body decoded UTF-8 response text
+ * @property headers response header values
+ * @property bytes bounded raw response bytes
+ */
 data class VmodalResponse(
     val statusCode: Int,
     val body: String = "",
     val headers: Map<String, List<String>> = emptyMap(),
     val bytes: ByteArray = body.toByteArray(StandardCharsets.UTF_8),
 ) {
+    /** Lazily decoded structured response value. */
     val json: Any? by lazy { if (body.isEmpty()) null else VmodalJson.parse(body) }
 
     @Suppress("UNCHECKED_CAST")
+    /** Returns the response as an object or throws [MalformedResponse]. */
     fun jsonObject(): Map<String, Any?> {
         if (body.isEmpty()) return emptyMap()
         return json as? Map<String, Any?> ?: throw MalformedResponse("JSON object response required")
     }
 
+    /** Returns response metadata without exposing its body. */
     override fun toString(): String =
         "VmodalResponse(statusCode=$statusCode, headerNames=${headers.keys}, bodyBytes=${bytes.size})"
 }
 
+/** Injectable synchronous transport contract. */
 interface VmodalTransport {
+    /** Executes [request] and returns a bounded response. */
     fun execute(request: VmodalRequest): VmodalResponse
 }
 
 internal enum class VmodalResponseMode { TEXT, BYTES }
 
+/** Default synchronous JVM transport with strict bounds and redirect handling. */
 class HttpUrlConnectionTransport private constructor(
     private val cfg: SdkConfig,
     private val jsonLimitBytes: Long,
@@ -228,9 +267,11 @@ private fun strIsLoopbackHost(value: String): Boolean = value.trim('[', ']').low
 
 private fun URL.effectivePort(): Int = if (port >= 0) port else defaultPort
 
+/** Creates a reopenable part backed by [file]. */
 fun filePart(fieldName: String, file: File, contentType: String = guessContentType(file.name)): VmodalFilePart =
     VmodalFilePart(fieldName, file.name, file.length(), contentType) { file.inputStream() }
 
+/** Creates a reopenable streaming part without retaining all bytes in memory. */
 fun streamPart(
     fieldName: String,
     fileName: String,
@@ -239,6 +280,7 @@ fun streamPart(
     opener: () -> InputStream,
 ): VmodalFilePart = VmodalFilePart(fieldName, fileName, contentLength, contentType, opener)
 
+/** @suppress */
 fun guessContentType(name: String): String = when (name.substringAfterLast('.', "").lowercase()) {
     "json", "jsonl" -> "application/json"
     "txt" -> "text/plain"

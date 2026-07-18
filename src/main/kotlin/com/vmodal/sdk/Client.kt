@@ -1,7 +1,26 @@
 package com.vmodal.sdk
 
+/** Published SDK semantic version. */
 const val VMODAL_SDK_VERSION = "1.0.0"
 
+/**
+ * Main SDK entry point and owner of resource clients.
+ *
+ * Blocking calls must run on a worker thread. Inject transports for tests or
+ * custom integrations; the client does not own externally supplied transports.
+ *
+ * @property cfg validated client configuration
+ * @property http low-level request facade
+ * @property auth authentication operations
+ * @property searches multimodal search operations
+ * @property collections collection and upload operations
+ * @property indexes index lifecycle operations
+ * @property admin administrative reporting operations
+ * @property gdrive disabled legacy Google Drive operations
+ * @property sql disabled legacy SQL operations
+ * @property images image retrieval operations
+ * @property r2 object-storage signing operations
+ */
 class Client(
     val cfg: SdkConfig,
     transport: VmodalTransport = HttpUrlConnectionTransport(cfg),
@@ -18,6 +37,7 @@ class Client(
     val images = ImagesResource(http)
     val r2 = R2Resource(http)
 
+    /** Builds a gateway client from explicit connection and identity fields. */
     constructor(
         baseUrl: String = PUBLIC_GATEWAY_URL,
         userId: String = "",
@@ -37,10 +57,14 @@ class Client(
         signedUploads ?: OkHttpSignedUploadTransport(timeoutMillis.toLong()),
     )
 
+    /** Checks service availability. This call blocks. */
     fun health(): HealthResponse = auth.health()
+    /** Returns whether authenticated access succeeds. This call blocks. */
     fun authCheck(userId: String = ""): Boolean = auth.authCheck(userId)
 
+    /** Factories for environment and trusted-direct configuration. */
     companion object {
+        /** Builds a client from environment configuration and optionally resolves identity. */
         fun fromEnv(
             env: Map<String, String> = System.getenv(),
             transport: VmodalTransport? = null,

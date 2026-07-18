@@ -2,10 +2,20 @@ package com.vmodal.sdk
 
 import java.io.IOException
 
+/**
+ * Supported low-level request facade used by resource classes.
+ *
+ * Calls are synchronous. Safe reads may retry according to [SdkConfig];
+ * mutations are never replayed automatically.
+ *
+ * @property cfg validated request configuration
+ * @property transport transport used to execute requests
+ */
 class VmodalHttp(
     val cfg: SdkConfig,
     val transport: VmodalTransport = HttpUrlConnectionTransport(cfg),
 ) {
+    /** Builds validated authentication and trusted-direct-mode headers. */
     fun headers(forceToken: Boolean = false, requireUserId: Boolean = true): Map<String, String> {
         val out = linkedMapOf<String, String>()
         val userId = cfg.normalizedUserId
@@ -23,6 +33,7 @@ class VmodalHttp(
         return out
     }
 
+    /** Executes a structured request and returns a decoded object. */
     fun request(
         method: String,
         path: String,
@@ -32,6 +43,7 @@ class VmodalHttp(
         params: Map<String, Any?> = emptyMap(),
     ): Map<String, Any?> = execute(method, path, json, data, files, params, headers()).jsonObject()
 
+    /** Executes a bounded in-memory binary request. */
     fun requestBytes(
         method: String,
         path: String,
@@ -46,6 +58,7 @@ class VmodalHttp(
         responseMode = VmodalResponseMode.BYTES,
     ).bytes
 
+    /** Executes a credential-authenticated user-lifecycle request. */
     fun requestUsers(
         method: String,
         path: String,

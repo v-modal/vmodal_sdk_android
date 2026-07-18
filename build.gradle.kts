@@ -1,9 +1,11 @@
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinJvm
 import org.gradle.jvm.tasks.Jar
+import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
 
 plugins {
     kotlin("jvm") version "1.9.24"
+    id("org.jetbrains.dokka") version "2.2.0"
     id("com.vanniktech.maven.publish") version "0.34.0"
     id("project-report")
 }
@@ -26,6 +28,26 @@ tasks.withType<Jar>().configureEach {
 
 kotlin {
     jvmToolchain(17)
+}
+
+dokka {
+    moduleName.set("VModal Android SDK")
+    dokkaPublications.html {
+        val docsOutput = providers.gradleProperty("vmodalDocsOutput")
+        outputDirectory.set(
+            if (docsOutput.isPresent) file(docsOutput.get())
+            else layout.buildDirectory.dir("dokka/html").get().asFile
+        )
+        failOnWarning.set(true)
+        suppressInheritedMembers.set(true)
+    }
+    dokkaSourceSets.main {
+        documentedVisibilities.set(setOf(VisibilityModifier.Public))
+        reportUndocumented.set(true)
+        skipEmptyPackages.set(true)
+        suppressedFiles.from(file("src/main/kotlin/com/vmodal/sdk/Routes.kt"))
+        includes.from(file("DOC_REF.md"))
+    }
 }
 
 mavenPublishing {

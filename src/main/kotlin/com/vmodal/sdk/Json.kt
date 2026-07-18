@@ -5,9 +5,11 @@ import java.io.IOException
 
 internal const val MAX_JSON_BYTES = 8L * 1024 * 1024
 
+/** Strict, bounded JSON facade shared by SDK models and low-level integrations. */
 object VmodalJson {
     private val adapter = Moshi.Builder().build().adapter(Any::class.java).nullSafe()
 
+    /** Encodes supported values or throws [ValidationFailed]. */
     fun stringify(value: Any?): String = try {
         adapter.toJson(jsonValue(value))
     } catch (exc: ValidationFailed) {
@@ -16,6 +18,7 @@ object VmodalJson {
         throw ValidationFailed("value cannot be encoded as JSON")
     }
 
+    /** Decodes one complete value or throws [MalformedResponse]. */
     fun parse(text: String): Any? {
         val size = jsonUtf8Size(text, MAX_JSON_BYTES)
         if (size > MAX_JSON_BYTES) throw ResponseTooLarge(MAX_JSON_BYTES, size)

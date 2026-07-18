@@ -93,7 +93,7 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/runne
 	android:supportsRtl
 		ADDED from /home/runner/work/vmx_api/vmx_api/sdk_android/examples/02_search/app/src/main/AndroidManifest.xml:8:9-35
 	android:label
-		ADDED from /home/runner/work/vmx_api/vmx_api/sdk_android/examples/02_search/app/src/main/AndroidManifest.xml:7:9-38
+		ADDED from /home/runner/work/vmx_api/vmx_api/sdk_android/examples/02_search/app/src/main/AndroidManifest.xml:7:9-51
 	android:allowBackup
 		ADDED from /home/runner/work/vmx_api/vmx_api/sdk_android/examples/02_search/app/src/main/AndroidManifest.xml:6:9-36
 	android:theme

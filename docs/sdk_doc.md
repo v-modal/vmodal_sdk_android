@@ -4,6 +4,11 @@ This guide starts with a working Android upload and then adds reliability and
 performance features one at a time. Complete the root [quick start](../README.md)
 first so you already have an authenticated `Client` named `sdk`.
 
+For exact Kotlin signatures and linked types, use the generated
+[Kotlin SDK reference](../docs_sdk/index.html). It is generated from public KDoc
+and intentionally excludes raw service hosts, endpoint paths, route tables, and
+implementation source.
+
 ## Runtime security contract
 
 Ordinary API requests automatically retry only `GET` and `HEAD`, for recognized

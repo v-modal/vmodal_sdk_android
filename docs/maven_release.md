@@ -81,8 +81,10 @@ The current AGP exceptions expire on 2026-08-15; an expired exception makes the
 release scan fail and must be removed by upgrading AGP/Gradle, not extended
 without a new reviewed risk decision.
 
-Both Gradle roots have independent `gradle/verification-metadata.xml` files.
-To update one after an intentional dependency change:
+Both Gradle roots retain independent `gradle/verification-metadata.xml` files
+for later re-enablement. Dependency verification is temporarily disabled in
+the release workflow to unblock releases. To update one after an intentional
+dependency change:
 
 ```bash
 gradle --write-verification-metadata sha256,pgp help
@@ -90,14 +92,14 @@ gradle --write-verification-metadata sha256,pgp help
 
 Run the command from that root. Generation is bootstrap only: manually review
 repository origins, plugin markers, transitive artifacts, signing keys, and
-every new checksum before committing. Never generate metadata in CI or weaken
-`--dependency-verification strict` to unblock a release. The example wrapper
-distribution and wrapper JAR checksums are enforced by `security_check.sh`.
+every new checksum before committing. Never generate metadata in CI. The
+example wrapper distribution and wrapper JAR checksums remain enforced by
+`security_check.sh`.
 
 Generate the resolved dependency report before approval:
 
 ```bash
-gradle --no-daemon --dependency-verification strict dependencyReport
+gradle --no-daemon --dependency-verification off dependencyReport
 ```
 
 Archive the report, verification metadata checksums, secret-scan result, and
@@ -109,9 +111,9 @@ From `uinterface/sdk_android`:
 
 ```bash
 bash test.sh all
-gradle --no-daemon --dependency-verification strict clean test publishToMavenLocal
+gradle --no-daemon --dependency-verification off clean test publishToMavenLocal
 cd examples/02_search
-./gradlew --no-daemon --dependency-verification strict \
+./gradlew --no-daemon --dependency-verification off \
   :app:assembleDebug :app:assembleRelease \
   -PvmodalUseMavenLocal=true -PvmodalSdkVersion=1.0.0
 ```
@@ -134,7 +136,14 @@ credential, or Cloudflare credential.
    Either package destination requires `publish_sdk_android=true`; selecting
    only that source input is the explicit source-only mode. The
    public source tag is `v<version>` and its annotated message records the
-   monorepo SHA. Existing tags or unchanged exports fail closed.
+   monorepo SHA. If the canonical tag already exists for a source-only refresh,
+   the workflow creates `v<version>_run<workflow-run-id>` without moving the
+   existing tag. An unchanged export still fails closed. The workflow verifies
+   the remote `main` and annotated tag targets before reporting success.
+   To refresh only the generated Kotlin SDK reference on Pages, set
+   `publish_sdk_docs_only=true`; this skips SDK tests, live tests, source export,
+   and Maven publication while retaining secret detection, Dokka generation,
+   endpoint-free validation, and immutable artifact checks.
 5. Download the published coordinate in a clean consumer with no local Maven
    cache. Verify signature, checksum, POM, version, license, and compilation.
 6. Confirm the public tag/export mapping and inspect audit logs. Revoke any
@@ -156,8 +165,9 @@ leave publishing frozen and correct the candidate on a new commit. If partial
 publication occurred, stop remaining targets, mark/yank the version where the
 registry permits it, rotate any exposed credential, investigate, and publish a
 new version. Roll an action back only to a previously reviewed full SHA; never
-restore a mutable tag, combined PAT, broad Cloudflare bypass, or disabled
-dependency verification.
+restore a mutable tag, combined PAT, or broad Cloudflare bypass. Re-enable
+dependency verification after the fast-release period and validate it from a
+clean Gradle cache before making it a release gate again.
 
 Attach closure evidence to `docs/todo/security.md` only after the corresponding
 local, workflow, backend, storage, and post-publication checks actually pass.

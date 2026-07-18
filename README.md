@@ -1,394 +1,270 @@
-> ### Get a free beta API key
->
-> Join the V-Modal beta by [filling out the contact form](https://v-modal.com/page/contact.ts).
-
-> ### Active support in Discord
->
-> We would love to help you build with V-Modal—come say hello in our [Discord channel](https://discord.gg/CRNsdJHg6)!
-
 <div align="center">
-
-<img src="assets/vmodal-banner.svg" alt="V-Modal Android SDK" width="760"/>
-
-<br/><br/>
-
-**Search video with plain text from your Kotlin Android app.**
-No video-processing stack, no vector database — just a client, an API key, and coroutines.
-
-[![Kotlin](https://img.shields.io/badge/Kotlin-100%25-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
-[![Android](https://img.shields.io/badge/Android-SDK-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
-[![Java](https://img.shields.io/badge/Java-17-orange?logo=openjdk&logoColor=white)](https://adoptium.net)
-[![Coroutines](https://img.shields.io/badge/Coroutines-friendly-5B6CFF)](https://kotlinlang.org/docs/coroutines-overview.html)
-[![Website](https://img.shields.io/badge/v--modal.com-visit-2EC5FF)](https://v-modal.com)
-
-[Quick start](#-quick-start) •
-[Runtime API keys](#-runtime-api-key-contract) •
-[Search](#-search-a-collection) •
-[Upload](#-upload-a-video) •
-[Examples](examples/01_starter/) •
-[Search app](docs/search_app.md) •
-[API reference](DOC_REF.md) •
-[Troubleshooting](#-troubleshooting)
-
+  <img src="assets/vmodal-logo.svg" alt="VModal" width="88">
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/android-original.svg" alt="Android" width="88">
+  <h1>VModal for Android</h1>
+  <p><strong>Give your Android app a multimodal memory.</strong></p>
+  <p>Upload video. Find moments by meaning, speech, text, or imagery.<br>Build the experience in Kotlin, Compose, Views, coroutines, and the Android tools you already know.</p>
+  <img src="https://img.shields.io/badge/Android-native-3DDC84?logo=android&logoColor=white" alt="Android native">
+  <img src="https://img.shields.io/badge/Kotlin-1.9%2B-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin 1.9+">
+  <img src="https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white" alt="Java 17">
+  <img src="https://img.shields.io/badge/Gradle-8.6-02303A?logo=gradle&logoColor=white" alt="Gradle 8.6">
+  <img src="https://img.shields.io/badge/license-Apache%202.0-6C63FF" alt="Apache License 2.0">
 </div>
 
----
+<br>
 
-## ✨ What you can do
+<img src="assets/dev_homepage.jpg" alt="A wall of searchable video moments and developer screens" width="100%">
 
-```kotlin
-val result = sdk.searches.searchVideo(
-    queryText = "red car at night",   // describe the moment in plain words
-    groupName = "traffic-cameras",    // your collection
-    streamName = "astream",
-    limit = 20,
-)
-```
+<p align="center"><em>Turn every video library into an experience Android users can explore.</em></p>
 
-That is the whole idea: upload videos into collections, then find moments in
-them with natural language. The SDK also manages collections, uploads files
-with signed streaming, offers explicit experimental multipart support for
-capable gateways, and plays nicely with
-`Dispatchers.IO`, `lifecycleScope`, and WorkManager.
+## Build the feature people remember
 
-Release artifacts are configured to use the Maven Central coordinates
-`com.vmodal:vmodal-sdk-android:<version>`. Source-project inclusion remains
-available for contributors.
+VModal brings multimodal video search and mobile-friendly uploads to Kotlin with a small, typed API. Your app owns the screens and lifecycle; the SDK handles the gateway, request models, response parsing, signed upload streams, progress, and cancellation.
 
-## 📋 What you need
-
-| Requirement | Details |
+| Your Android experience | VModal gives you |
 |---|---|
-| <img src="assets/kotlin-original.svg" width="16"/> Kotlin project | Android project using Gradle Kotlin DSL |
-| ☕ Java 17 | `sourceCompatibility` / `jvmTarget = "17"` |
-| 📦 Maven Central | The requested version must have passed the release workflow and been published |
-| 🔑 API key | Loaded at runtime from your authenticated application backend |
+| “Find the red car entering the parking lot” | Semantic video and image search |
+| Search words spoken or shown on screen | ASR and OCR search sources |
+| Upload from the system photo picker | Streaming `content://` URI support |
+| A cancel action that really cancels | `UploadHandle` with progress and cancellation |
+| Compose, Views, or your own design system | A UI-free Kotlin client |
+| Existing authentication and DI | App-owned runtime credentials—no login UI imposed |
+| Work that survives beyond one screen | Worker-friendly blocking APIs and async uploads |
 
-> ⚠️ Never bundle a real API key in source, `BuildConfig`, resources, or
-> `AndroidManifest.xml`. The parent application must inject it at runtime.
+> [!TIP]
+> **Building a mobile video experience?** [Get a free beta API key](https://v-modal.com/page/contact.ts) and join the [VModal Discord](https://discord.gg/CRNsdJHg6). We would love to help you ship it.
 
-## 🔒 Production security expectations
+## Kotlin SDK reference
 
-Use the authenticated gateway with a user-scoped, revocable, short-lived
-credential obtained from your application's authenticated backend. Provider
-master keys and token-minting secrets must never reach the APK. `mode =
-"gateway"` is the default, and gateway requests omit caller-supplied user,
-tenant, and email headers. Use `Client.unsafeDirect(...)` only for a trusted
-private network whose downstream service
-independently authenticates and authorizes identity headers; it is unsafe as a
-caller-trusted identity boundary on a public network.
+Browse the generated [Kotlin SDK reference](docs_sdk/index.html) for public
+classes, constructors, properties, extension functions, and methods. KDoc beside
+the Kotlin declarations is the content authority. The published reference
+intentionally omits service hosts, endpoint paths, route tables, and
+implementation source; route synchronization is checked by a separate
+regression tool.
 
-The SDK automatically retries only `GET` and `HEAD`. `POST`, `PUT`, `PATCH`,
-and `DELETE` are sent once, even when a response is lost, unless the separate
-signed multipart protocol can reconcile a part by status and ETag. Success
-bodies are bounded to 8 MiB for JSON/text and 64 MiB for bytes; error bodies are
-bounded to 1 MiB. JSON and upload checkpoints are strictly parsed, and
-configuration/error strings do not print tokens, URLs, identities, or response
-bodies. See the [upload and runtime contract](docs/sdk_doc.md) and [credential
-lifecycle](docs/manage_api_key.md).
+## Start in minutes
 
-## 🚀 Quick start
+### 1. Add the SDK
 
-Three steps from zero to your first API response.
-
-### 1️⃣ Add the SDK dependency
-
-Confirm that the requested SDK version is published in Maven Central. Until the
-first registry release completes, contributors must use the source project.
-
-Make sure your Android project's `settings.gradle.kts` contains Maven Central:
+The release coordinate is:
 
 ```kotlin
-dependencyResolutionManagement {
-    repositories {
-        mavenCentral()
-    }
-}
-```
-
-### 2️⃣ Configure your app module
-
-In the app module's `build.gradle.kts`, use Java 17 and add the SDK dependency:
-
-```kotlin
-android {
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-}
-
 dependencies {
     implementation("com.vmodal:vmodal-sdk-android:1.0.0")
 }
 ```
 
-Sync the Gradle project, then allow network access in
-`app/src/main/AndroidManifest.xml` (directly inside `<manifest>`):
+Keep `mavenCentral()` in `dependencyResolutionManagement`. Maven Central publication is still pending, so current adopters should clone the [public SDK repository](https://github.com/v-modal/vmodal_sdk_android) beside their app and include the source project:
+
+```kotlin
+// settings.gradle.kts
+include(":vmodal-sdk-android")
+project(":vmodal-sdk-android").projectDir = file("../vmodal_sdk_android")
+```
+
+```kotlin
+// app/build.gradle.kts
+dependencies {
+    implementation(project(":vmodal-sdk-android"))
+}
+```
+
+The project uses Java 17. Your app also needs network permission:
 
 ```xml
 <uses-permission android:name="android.permission.INTERNET" />
 ```
 
-### 3️⃣ Connect and print the API status
+### 2. Connect with your runtime API key
 
-V-Modal calls perform network I/O. Run them from `Dispatchers.IO`, WorkManager,
-or another worker thread — never the Android main thread.
-
-The following function authenticates the API key, creates the ready-to-use
-client, and returns the first visible result:
+Load the key through your app's authenticated backend or secure, app-owned storage. Never bundle a real key in `BuildConfig`, resources, the manifest, or source control.
 
 ```kotlin
 import com.vmodal.sdk.Client
 import com.vmodal.sdk.MutableApiKeyProvider
-import com.vmodal.sdk.PUBLIC_GATEWAY_URL
 import com.vmodal.sdk.SdkConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-suspend fun checkVmodal(apiKeys: MutableApiKeyProvider): Client = withContext(Dispatchers.IO) {
-    val firstClient = Client(
-        SdkConfig(
-            baseUrl = PUBLIC_GATEWAY_URL,
-            userId = "",
-            mode = "gateway",
-            apiKeyProvider = apiKeys,
-        )
-    )
-    val me = firstClient.auth.me()
+val keys = MutableApiKeyProvider(apiKeyLoadedByYourApp)
 
-    val sdk = Client(
-        firstClient.cfg.copy(
+val vmodal = withContext(Dispatchers.IO) {
+    val bootstrap = Client(SdkConfig(apiKeyProvider = keys))
+    val me = bootstrap.auth.me()
+
+    Client(
+        bootstrap.cfg.copy(
             userId = requireNotNull(me.userId),
             tenantId = me.tenantId.orEmpty(),
             email = me.email.orEmpty(),
         )
     )
-
-    val health = sdk.health()
-    println("VModal connected: ${health.status}")
-    sdk
 }
 ```
 
-Call it from an Activity or Fragment lifecycle scope:
+Keep `keys` and `vmodal` at application or authenticated-session scope so Activities, ViewModels, and workers share the same identity and key rotations.
+
+## Search video from a ViewModel
+
+Blocking SDK calls belong on `Dispatchers.IO`. Bring only the result back to your UI state:
 
 ```kotlin
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
+viewModelScope.launch {
+    val results = withContext(Dispatchers.IO) {
+        val groups = vmodal.collections.listGroups("vid_file")
+        val group = groups.findGroup("travel-diaries", "vid_file")
+            ?: error("Collection is not available for this API key")
+        val version = group.latestLancedbVersion
+            ?: error("Collection has no searchable LanceDB version")
 
-lifecycleScope.launch {
-    val apiKeys = MutableApiKeyProvider(apiKeyLoadedByYourApp)
-    val sdk = checkVmodal(apiKeys)
-    // Keep or pass sdk to the code that needs V-Modal.
-    // Retain apiKeys at application scope, then call apiKeys.rotate(freshKey).
-    // On logout/account switch: clear persisted state, then apiKeys.clear().
+        vmodal.searches.searchVideo(
+            queryText = "the cyclist crossing the bridge at sunset",
+            groupName = group.groupName,
+            streamName = "astream",
+            searchSources = listOf("ocr", "asr", "image"),
+            limit = 20,
+            versionLancedb = version,
+        )
+    }
+
+    println("${results.cntActual} moments found")
+    results.data.forEach(::println)
 }
 ```
 
-Use `viewModelScope.launch { ... }` instead when the client belongs to a
-ViewModel. A printed `VModal connected: ...` message means installation,
-authentication, and network access are all working. 🎉
+Search collection names are scoped to the authenticated runtime key. Use a
+`vid_file` `GroupItem` returned by `listGroups()`, and send its
+`latestLancedbVersion`; omitting the advertised version can target the wrong
+index or an unavailable default.
 
-### How the connection works
+The response stays typed where the contract is stable and preserves `raw: Map<String, Any?>` so new server fields remain available immediately.
 
-```mermaid
-flowchart LR
-    A["🔑 Runtime API key"] --> B["MutableApiKeyProvider"]
-    B --> C["Client(mode = gateway)"]
-    C --> D["auth.me()"]
-    D --> E["Client(cfg + userId)"]
-    E --> F["health() / search / upload"]
-```
+## Upload from an Android picker
 
-## 🔄 Runtime API-key contract
-
-The parent Android application and this SDK have separate responsibilities.
-The app owns the credential lifecycle; the SDK only reads the injected current
-value while building an authenticated request.
-
-| Parent application owns | SDK owns |
-|---|---|
-| Authenticate the signed-in app user | `ApiKeyProvider` request-time contract |
-| Fetch the API key from the app backend | Atomic swaps and fail-closed clearing in `MutableApiKeyProvider` |
-| Choose secure, app-owned persistence | One key snapshot per authenticated request |
-| Refresh, version, and serialize rotations | `Authorization: Bearer <key>` on existing authenticated routes |
-| Decide whether a failed operation is safe to retry | Filtering auth headers from presigned R2 upload requests |
-
-`ApiKeyProvider.current()` is synchronous. It must return an already-loaded
-value and must not perform storage or network I/O. Keep the provider and
-`Client` at application scope so Activities, coroutines, and WorkManager jobs
-all observe the same rotations.
-
-```mermaid
-flowchart LR
-    subgraph App["Parent Android application"]
-        A["App-owned secure storage"] --> B["Load cached key on worker thread"]
-        C["Authenticated app backend"] --> D["Fetch latest key"]
-        B --> E["MutableApiKeyProvider"]
-        D -->|"persist, then rotate(newKey)"| E
-    end
-    subgraph SDK["uinterface/sdk_android"]
-        F["SdkConfig(apiKeyProvider)"] --> G["Client"]
-        G --> H["Build authenticated request"]
-        H --> I["Authorization: Bearer key snapshot"]
-    end
-    E --> F
-```
-
-At application startup:
-
-1. On `Dispatchers.IO`, load the signed-in session and cached API key from
-   app-owned storage. If no key exists, complete sign-in and fetch the first key
-   before creating an authenticated client.
-2. Create one `MutableApiKeyProvider`, inject it through `SdkConfig`, call
-   `auth.me()`, and install the resolved `Client` in the app dependency graph.
-3. Fetch a newer key in the background. Validate and persist it using the
-   app's policy, then call `rotate(newKey)`.
-
-Rotation changes the next request; a request already created keeps its original
-header. A blank initial or rotated key raises `ValidationFailed`, and a failed
-rotation leaves the last working key active. Rotation is only valid for another
-key belonging to the same V-Modal identity. For a different user or tenant,
-create a new `Client` and resolve `auth.me()` again.
-
-On logout or account switch, first stop/cancel work that uses the client, clear
-the app's persisted credential, and call `apiKeys.clear()` (or `close()`). The
-operation is idempotent. Later authenticated requests fail closed with
-`AuthError`; a configured provider never falls back to the legacy static token.
-Clearing removes the SDK's live reference, but immutable JVM strings cannot be
-guaranteed to be zeroized from every old heap copy.
-
-Authenticated API calls require HTTPS except for literal loopback development
-hosts, reject cross-origin absolute URLs, and do not follow redirects. Signed
-uploads apply the same HTTPS policy, strip API identity headers, and do not
-follow redirects.
-
-On `401`, the app may refresh the key and retry one safe, idempotent operation
-once. Do not treat `403` as proof of expiration, and do not automatically replay
-uploads or mutating `POST` requests. See the framework-free
-[rotation example](examples/01_starter/03_rotate_api_key.kt).
-
-The legacy `token = "..."` constructors and `SdkConfig.fromEnv()` remain
-supported for JVM tools, CI, and existing integrations. `apiKeyProvider` takes
-precedence when both are supplied.
-
-## 📁 List your collections
-
-Once the quick start works, use the returned `sdk` client on the same worker
-context:
+Convert the selected `content://` URI into a reopenable `UploadSource` using the [`ContentResolver` adapter](examples/01_starter/08_content_uri_source.kt), then start an asynchronous signed upload:
 
 ```kotlin
-val groups = sdk.collections.listGroups(mode = "vid_file")
-println("Collections: ${groups.total}")
-groups.data.forEach(::println)
-```
-
-This is a useful second check because it confirms that the authenticated user
-can reach their V-Modal data.
-
-## 🔍 Search a collection
-
-Replace `traffic-cameras` with a collection returned by `listGroups()`:
-
-```kotlin
-val result = sdk.searches.searchVideo(
-    queryText = "red car at night",
-    groupName = "traffic-cameras",
-    streamName = "astream",
-    limit = 20,
+val source = contentUriSource(
+    context = applicationContext,
+    uri = selectedVideoUri,
+    fileName = "weekend-ride.mp4",
 )
 
-println("Matches returned: ${result.cntActual}")
-result.data.forEach(::println)
+val upload = vmodal.collections.videoUploadAsync(
+    source = source,
+    collectionName = "travel-diaries",
+    subCollectionName = "mobile-uploads",
+    onProgress = { value ->
+        println("Uploading ${value.percent}%")
+    },
+    onSuccess = { result ->
+        println("Ready: ${result.destPath}")
+    },
+    onFailure = { error ->
+        error.printStackTrace()
+    },
+)
+
+// Connect this to your Compose or View cancel action when needed:
+// upload.cancel()
 ```
 
-> 💡 If the call succeeds but returns no matches, first confirm the collection
-> name, stream name, and query text. An empty result is different from an API
-> error.
+The SDK streams the video instead of loading it into memory. Upload callbacks run off the main thread; switch to `Dispatchers.Main` before changing Views or Compose state.
 
-## 📤 Upload a video
+Signed single upload is the production default for every file size. Multipart upload is experimental and must be enabled explicitly with `VideoUploadOptions(multipart = true)`; it fails with `FeatureDisabled` when the gateway does not expose the complete multipart route family.
 
-After authentication and search work, continue with the upload examples. The
-Android-safe path is:
+## Made for Android lifecycles
 
-```mermaid
-flowchart LR
-    A["🎬 User picks video<br/>(content:// URI)"] --> B["UploadSource<br/>example 08"]
-    B --> C["videoUploadAsync()<br/>example 09"]
-    C --> D["UploadHandle<br/>(progress / cancel)"]
+- Use `viewModelScope` or `lifecycleScope` for search and collection operations.
+- Feed picker results through `ContentResolver` without copying the whole file into memory.
+- Use `videoUploadAsync()` for UI-driven uploads and retain its `UploadHandle` for cancellation.
+- Use the blocking `videoUpload()` inside WorkManager or another worker thread.
+- Keep the SDK UI-free: Jetpack Compose and classic Views are both first-class consumers.
+- Rotate a same-user credential without rebuilding the client: `keys.rotate(freshKey)`.
+- On logout or account switch, cancel work, clear upload persistence, call `keys.clear()`, and build a new client for the next identity.
+
+## One client, focused resources
+
+```text
+vmodal.auth          identity and health
+vmodal.searches      multimodal video search
+vmodal.collections   upload and collection lifecycle
+vmodal.indexes       create, inspect, and delete indexes
+vmodal.admin         usage and cache statistics
+vmodal.r2            presigned object-storage operations
+vmodal.images        image retrieval
 ```
 
-1. Let the user select a video and obtain a `content://` URI.
-2. Convert the URI to an `UploadSource` with
-   [example 08](examples/01_starter/08_content_uri_source.kt).
-3. Start the upload with
-   [example 09](examples/01_starter/09_async_video_upload.kt).
-4. Keep the returned `UploadHandle` if the UI needs a Cancel action.
+All SDK failures derive from `SdkError`. Apps can handle `AuthError`, `ValidationFailed`, `ApiError`, `FeatureDisabled`, `TransportError`, `ResponseTooLarge`, and `MalformedResponse` separately.
 
-The SDK streams the video instead of loading the whole file into memory. Every
-file size uses the supported single signed-URL flow by default. Multipart is an
-experimental explicit opt-in with `VideoUploadOptions(multipart = true)` for a
-gateway that exposes the complete multipart route family. A gateway without
-that capability fails with `FeatureDisabled` instead of silently selecting a
-missing API by file size.
+## Security and network behavior
 
-## 🛠️ Troubleshooting
+Gateway mode is the default. It sends caller identity only through `Authorization: Bearer <key>` and ignores caller-supplied identity headers. `Client.unsafeDirect(...)` is reserved for trusted private networks whose downstream service independently authenticates identity.
 
-| Symptom | Fix |
-|---|---|
-| `VMODAL_API_KEY is required` | `Client.fromEnv()` is intended for JVM tools and CI, where environment variables exist. In an Android app, inject a runtime API-key provider as shown in the quick start. |
-| `auth/me returned no user_id` or auth error | Confirm the API key is current and belongs to the environment identified by `PUBLIC_GATEWAY_URL`. Do not invent or hard-code a user ID; `auth.me()` resolves the key owner. |
-| `NetworkOnMainThreadException` or frozen UI | Move blocking calls (`auth.me()`, `health()`, `listGroups()`, `searchVideo()`) to `Dispatchers.IO` or WorkManager. `videoUploadAsync()` already runs off the main thread, but its callbacks do too — switch to `Dispatchers.Main` before updating views. |
-| Gradle cannot resolve the SDK | Confirm `mavenCentral()` is configured and use a released version from the public repository. |
+- `GET` and `HEAD` may retry recognized transient failures; mutations are sent once.
+- Authenticated calls require HTTPS, except literal loopback hosts used for development.
+- Redirects are not followed.
+- JSON/text responses are bounded to 8 MiB, errors to 1 MiB, and binary responses to 64 MiB.
+- Presigned uploads never receive the VModal bearer credential or identity headers.
 
-## ✅ Verify the SDK checkout
+For the complete contract, read [SDK behavior and uploads](docs/sdk_doc.md) and [runtime API-key management](docs/manage_api_key.md).
 
-These commands test the SDK itself; they are not required each time the Android
-app runs:
+## Android toolchain
+
+| Component | Reference configuration |
+|---|---:|
+| Kotlin | `1.9.24` |
+| Java / JVM target | `17` |
+| Gradle | `8.6` |
+| Android Gradle Plugin | `8.4.2` |
+| Reference app `minSdk` | API 24 / Android 7.0 |
+| Reference app `compileSdk` | API 34 |
+
+The core artifact deliberately avoids Android framework dependencies, which keeps it JVM-testable. The included Android reference app demonstrates Compose, `content://` uploads, lifecycle scopes, and source-project consumption.
+
+## Explore the SDK
+
+- [Run the staged full search application](examples/03_fullapp/)
+- [Run the Android upload → index → search app](examples/02_search/)
+- [Copy the Kotlin starter examples](examples/01_starter/)
+- [Read the upload and WorkManager guide](docs/sdk_doc.md)
+- [Manage API keys safely](docs/manage_api_key.md)
+- [Build the complete upload → index → search experience](docs/search_app.md)
+- [Browse the API quick reference](DOC_REF.md)
+- [Open an issue](https://github.com/v-modal/vmodal_sdk_android/issues)
+
+## Development
 
 ```bash
-gradle --no-daemon clean build publishToMavenLocal
-cd examples/02_search
-./gradlew --no-daemon :app:assembleDebug \
-  -PvmodalUseMavenLocal=true -PvmodalSdkVersion=1.0.0
+git clone https://github.com/v-modal/vmodal_sdk_android.git
+cd vmodal_sdk_android
+bash install.sh check
+bash test.sh all
 ```
 
-This verifies both the Maven publication and Android consumption. No emulator
-or API token is required. Maintainers can follow the
-[Maven Central release guide](docs/maven_release.md).
+Build the included Android app against the source checkout:
 
-## 🗺️ Learn progressively
+```bash
+cd examples/02_search
+./gradlew --no-daemon :app:assembleDebug
+```
 
-| Step | Where | What you get |
-|---|---|---|
-| 1 | This page | Working client, first API response |
-| 2 | [Examples](examples/01_starter/) | Copy-paste building blocks, grouped by task |
-| 3 | [Upload guide](docs/sdk_doc.md) | Android URI uploads, cancellation, WorkManager, process-death resume |
-| 4 | [API quick reference](DOC_REF.md) | Every method and response type |
-
-All typed response objects expose `raw: Map<String, Any?>` for server fields
-that do not yet have a typed property. All SDK failures derive from `SdkError`;
-applications can handle `AuthError`, `ValidationFailed`, `ApiError`, and
-`FeatureDisabled` separately when needed. Transport, size, and JSON failures are
-available as `TransportError`, `ResponseTooLarge`, and `MalformedResponse`.
+No emulator or API credential is required for the offline SDK gate. Maintainers can follow the [Maven Central release guide](docs/maven_release.md).
 
 ---
 
 <div align="center">
-
-<img src="assets/kotlin-original.svg" width="36" alt="Kotlin"/>&nbsp;&nbsp;
-<img src="assets/android-original.svg" width="36" alt="Android"/>&nbsp;&nbsp;
-<img src="assets/androidstudio-original.svg" width="36" alt="Android Studio"/>&nbsp;&nbsp;
-<img src="assets/gradle-original.svg" width="36" alt="Gradle"/>
-
-Built for Kotlin developers, by [**v-modal.com**](https://v-modal.com) 💜
-
-<sub>Logo attributions in [assets/README.md](assets/README.md).</sub>
-
-<sub>Licensed under the [Apache License 2.0](LICENSE).</sub>
-
+  <img src="assets/kotlin-original.svg" width="38" alt="Kotlin">
+  &nbsp;&nbsp;
+  <img src="assets/android-original.svg" width="38" alt="Android">
+  &nbsp;&nbsp;
+  <img src="assets/androidstudio-original.svg" width="38" alt="Android Studio">
+  &nbsp;&nbsp;
+  <img src="assets/gradle-original.svg" width="38" alt="Gradle">
+  <p><strong>Build video experiences people can search, not just scroll.</strong></p>
+  <sub>Built for Android developers by <a href="https://v-modal.com">VModal</a>. Licensed under the <a href="LICENSE">Apache License 2.0</a>.</sub>
+  <br>
+  <sub>Android and the Android robot are trademarks of Google LLC. Asset attribution is documented in <a href="assets/README.md">assets/README.md</a>.</sub>
 </div>

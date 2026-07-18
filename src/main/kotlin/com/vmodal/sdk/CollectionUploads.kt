@@ -13,6 +13,19 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
+/**
+ * Signed-upload policy including retry, resume, cancellation, and explicit
+ * multipart behavior. Multipart is never selected implicitly by file size.
+ *
+ * @property multipart whether to use multipart upload
+ * @property partSizeBytes target bytes per multipart part
+ * @property maxConcurrency maximum parallel parts
+ * @property maxPartAttempts maximum attempts per part
+ * @property partTimeoutSeconds timeout for each part
+ * @property resume whether to resume a compatible checkpoint
+ * @property sessionStore multipart checkpoint store
+ * @property adaptiveConditions optional platform conditions for adaptive tuning
+ */
 data class VideoUploadOptions(
     val multipart: Boolean = false,
     /** Retained for source compatibility. Upload strategy is never selected by file size. */
@@ -25,6 +38,7 @@ data class VideoUploadOptions(
     val sessionStore: UploadSessionStore = UploadSessionStores.memory,
     val adaptiveConditions: UploadConditions? = null,
 ) {
+    /** Applies the optional adaptive policy without mutating this value. */
     fun resolvedFor(size: Long): VideoUploadOptions {
         if (!multipart) return this
         val conditions = adaptiveConditions ?: return this
@@ -37,6 +51,7 @@ data class VideoUploadOptions(
         )
     }
 
+    /** Validates multipart settings against the source size. */
     fun validate(size: Long) {
         if (!multipart) return
         if (partSizeBytes < 5L * 1024 * 1024) throw ValidationFailed("part_size_bytes must be at least 5 MiB")
@@ -48,6 +63,7 @@ data class VideoUploadOptions(
     }
 }
 
+/** Starts a non-blocking, cancelable upload and returns its [UploadHandle]. */
 fun CollectionsResource.videoUploadAsync(
     source: UploadSource,
     collectionName: String,
@@ -93,6 +109,7 @@ fun CollectionsResource.videoUpload(
     return videoUploadRun(source, collectionName, subCollectionName, mode, modality, ttl, resolved, UploadHandle(), onProgress)
 }
 
+/** Uploads sources sequentially on the calling worker thread. */
 fun CollectionsResource.videoUploadBulk(
     sources: List<UploadSource>,
     collectionName: String,
@@ -106,6 +123,7 @@ fun CollectionsResource.videoUploadBulk(
     return VideoUploadBulkResponse(mapOf("data" to data.map { it.raw }, "total" to data.size))
 }
 
+/** Starts a cancelable bulk upload and reports aggregate byte progress. */
 fun CollectionsResource.videoUploadBulkAsync(
     sources: List<UploadSource>,
     collectionName: String,

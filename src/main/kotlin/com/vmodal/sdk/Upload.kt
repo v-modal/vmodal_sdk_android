@@ -24,6 +24,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  * The SDK intentionally does not depend on android.net.Uri. Keeping the Android framework out of
  * the core artifact makes it JVM-testable, while an app can still stream a content URI with:
  * `UploadSource(name, size, mime, uri.toString()) { resolver.openInputStream(uri)!! }`.
+ *
+ * @property fileName transmitted file name
+ * @property contentLength exact source length
+ * @property contentType source media type
+ * @property sourceId stable checkpoint identity
+ * @property versionTag source revision used to reject stale checkpoints
  */
 class UploadSource(
     val fileName: String,
@@ -40,6 +46,7 @@ class UploadSource(
         if (contentLength < 0) throw ValidationFailed("content_length must be known for a signed upload")
     }
 
+    /** Opens a bounded stream for the requested byte range. The caller owns it. */
     fun open(offset: Long = 0, length: Long = contentLength - offset): InputStream {
         if (offset < 0 || length < 0 || offset + length > contentLength) {
             throw ValidationFailed("upload source range is invalid")
@@ -55,7 +62,9 @@ class UploadSource(
         }
     }
 
+    /** Factories for common replayable sources. */
     companion object {
+        /** Creates a replayable source whose version tag reflects file size and timestamp. */
         fun fromFile(file: File, contentType: String = guessContentType(file.name)): UploadSource {
             if (!file.isFile) throw ValidationFailed("file must exist: ${file.path}")
             return UploadSource(
@@ -70,22 +79,39 @@ class UploadSource(
     }
 }
 
+/**
+ * Immutable byte progress with a clamped whole-number percentage.
+ *
+ * @property uploadedBytes bytes sent so far
+ * @property totalBytes total bytes in this upload
+ */
 data class UploadProgress(val uploadedBytes: Long, val totalBytes: Long) {
+    /** Completed percentage from zero through one hundred. */
     val percent: Int = if (totalBytes <= 0) 0 else ((uploadedBytes * 100) / totalBytes).coerceIn(0, 100).toInt()
 }
 
+/**
+ * Completion details returned by a signed upload transport.
+ *
+ * @property statusCode object-store response status
+ * @property etag object-store entity tag
+ * @property localMd5 locally calculated content digest
+ */
 data class SignedUploadResult(
     val statusCode: Int,
     val etag: String = "",
     val localMd5: String = "",
 )
 
+/** Cancellation handle shared by all requests in one asynchronous upload. */
 class UploadHandle internal constructor() {
     private val canceled = AtomicBoolean(false)
     private val calls = CopyOnWriteArrayList<Call>()
 
+    /** Whether cancellation has been requested. */
     val isCanceled: Boolean get() = canceled.get()
 
+    /** Requests cancellation and cancels every active transport call. */
     fun cancel() {
         canceled.set(true)
         calls.forEach { it.cancel() }
@@ -108,7 +134,9 @@ class UploadHandle internal constructor() {
     internal val activeCallCount: Int get() = calls.size
 }
 
+/** Injectable asynchronous byte transport for pre-authorized upload locations. */
 interface SignedUploadTransport {
+    /** Enqueues one signed upload and reports progress and completion asynchronously. */
     fun enqueue(
         source: UploadSource,
         url: String,
@@ -124,6 +152,7 @@ interface SignedUploadTransport {
     ): UploadHandle
 }
 
+/** OkHttp implementation of [SignedUploadTransport]. */
 class OkHttpSignedUploadTransport(
     timeoutMillis: Long = 300_000,
     client: OkHttpClient = OkHttpClient.Builder()
@@ -137,6 +166,7 @@ class OkHttpSignedUploadTransport(
         .followSslRedirects(false)
         .build()
 
+    /** Enqueues one signed upload through OkHttp. */
     override fun enqueue(
         source: UploadSource,
         url: String,
@@ -278,24 +308,33 @@ internal fun md5Hex(source: UploadSource, offset: Long, length: Long): String {
     return digest.digest().strHex()
 }
 
+/** Durable checkpoint contract used to resume multipart uploads. */
 interface UploadSessionStore {
+    /** Loads the checkpoint for [key], or null when absent. */
     fun load(key: String): Map<String, Any?>?
+    /** Atomically stores [value] for [key]. */
     fun save(key: String, value: Map<String, Any?>)
+    /** Removes the checkpoint for [key]. */
     fun remove(key: String)
 }
 
+/** Process-local thread-safe checkpoint store. */
 class MemoryUploadSessionStore : UploadSessionStore {
     private val values = ConcurrentHashMap<String, Map<String, Any?>>()
 
+    /** Loads an in-memory checkpoint. */
     override fun load(key: String): Map<String, Any?>? = values[key]
+    /** Stores an in-memory checkpoint. */
     override fun save(key: String, value: Map<String, Any?>) {
         values[key] = value
     }
+    /** Removes an in-memory checkpoint. */
     override fun remove(key: String) {
         values.remove(key)
     }
 }
 
+/** File-backed checkpoint store with atomic replacement and recovery backup. */
 class FileUploadSessionStore(private val directory: File) : UploadSessionStore {
     init {
         if (!directory.exists() && !directory.mkdirs()) throw IOException("cannot create upload checkpoint directory: ${directory.path}")
@@ -303,6 +342,7 @@ class FileUploadSessionStore(private val directory: File) : UploadSessionStore {
     }
 
     @Synchronized
+    /** Loads and validates a bounded checkpoint document. */
     override fun load(key: String): Map<String, Any?>? {
         val file = file(key)
         val source = if (file.isFile) file else backup(file).takeIf { it.isFile } ?: return null
@@ -313,6 +353,7 @@ class FileUploadSessionStore(private val directory: File) : UploadSessionStore {
     }
 
     @Synchronized
+    /** Atomically saves a bounded checkpoint document. */
     override fun save(key: String, value: Map<String, Any?>) {
         val file = file(key)
         val temp = File(directory, ".${file.name}.${Thread.currentThread().id}.tmp")
@@ -332,6 +373,7 @@ class FileUploadSessionStore(private val directory: File) : UploadSessionStore {
     }
 
     @Synchronized
+    /** Removes both the primary and recovery checkpoint. */
     override fun remove(key: String) {
         val file = file(key)
         if (file.exists() && !file.delete()) throw IOException("cannot delete upload checkpoint: ${file.path}")
@@ -343,7 +385,9 @@ class FileUploadSessionStore(private val directory: File) : UploadSessionStore {
     private fun backup(file: File) = File(directory, file.name + ".bak")
 }
 
+/** Shared checkpoint-store factories and defaults. */
 object UploadSessionStores {
+    /** Process-local default checkpoint store. */
     val memory: UploadSessionStore = MemoryUploadSessionStore()
 }
 
