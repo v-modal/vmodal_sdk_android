@@ -38,11 +38,11 @@
         {
           "name": "vmodal-sdk-android-1.0.0.jar",
           "url": "vmodal-sdk-android-1.0.0.jar",
-          "size": 272144,
-          "sha512": "6d17dcc9c7a9ad9768d08bbee8c51276f513be85bbf4907e36762daa3c37751f070ab7ef250601989630e9a99e79f27849e3c1c610dfdf0431da4e3aec670c58",
-          "sha256": "0e5a17c8d8bf26315890fad31b2f1dfff774f3481bf9f731f3c3c76122f9f576",
-          "sha1": "ebfe644fc559057484d9f57296e61eb1f6288836",
-          "md5": "372bcc46d94b2bb8c6a9d3fbcc9d14fd"
+          "size": 283540,
+          "sha512": "ef69929e30e5f984a042c5142574fba55a3c79cc9daf8c1671702199cd6ec2040303836e9bdb2ecf6bd212c0f26f12da4dce6365ef966d415accaf03529ddae3",
+          "sha256": "b8d12e5ef7bff34385c1c89c0a75e4d5fdc705f4b40041d41cac898b584cbb44",
+          "sha1": "5c1c4160a042b5e0ffac58b5958892e4e47abe90",
+          "md5": "7b18f6920b84da55f050d32686a6db64"
         }
       ]
     },
@@ -84,11 +84,11 @@
         {
           "name": "vmodal-sdk-android-1.0.0.jar",
           "url": "vmodal-sdk-android-1.0.0.jar",
-          "size": 272144,
-          "sha512": "6d17dcc9c7a9ad9768d08bbee8c51276f513be85bbf4907e36762daa3c37751f070ab7ef250601989630e9a99e79f27849e3c1c610dfdf0431da4e3aec670c58",
-          "sha256": "0e5a17c8d8bf26315890fad31b2f1dfff774f3481bf9f731f3c3c76122f9f576",
-          "sha1": "ebfe644fc559057484d9f57296e61eb1f6288836",
-          "md5": "372bcc46d94b2bb8c6a9d3fbcc9d14fd"
+          "size": 283540,
+          "sha512": "ef69929e30e5f984a042c5142574fba55a3c79cc9daf8c1671702199cd6ec2040303836e9bdb2ecf6bd212c0f26f12da4dce6365ef966d415accaf03529ddae3",
+          "sha256": "b8d12e5ef7bff34385c1c89c0a75e4d5fdc705f4b40041d41cac898b584cbb44",
+          "sha1": "5c1c4160a042b5e0ffac58b5958892e4e47abe90",
+          "md5": "7b18f6920b84da55f050d32686a6db64"
         }
       ]
     },
@@ -104,11 +104,11 @@
         {
           "name": "vmodal-sdk-android-1.0.0-sources.jar",
           "url": "vmodal-sdk-android-1.0.0-sources.jar",
-          "size": 41389,
-          "sha512": "83501604aebf6ca6f022ab1578cda81a9ff1289d8e200e15b1e16d6d11184301aea0526cb4ca9f35cb61635b3964a974fa849e831f034613241faf5fc07c1a38",
-          "sha256": "54c8dcb10cb2ab9176b36c32bbaf7f4755a757cc01d201dd8582d4c71043e27e",
-          "sha1": "17622a910ff08487a5dd5973e9132cd927459d6d",
-          "md5": "1e7c3b046459ea2e277629397b94945b"
+          "size": 44456,
+          "sha512": "521474ab437a2bcec1079fcd4962bba05e14034d2e2e782d0f85de5fc97e39a6835e53e6f8e1e5f44edf8780bde764b18ac2f8c73ca0aa47e61890d32799aae2",
+          "sha256": "54a756ef7b72e3d4d9fd52f1209e4511285fc8c98b24a7836ab9242d63cab5ba",
+          "sha1": "855fc1cf171a069a0432f31cdfc5630f066c03b4",
+          "md5": "e2f268dde62ec2e792619442e60a857f"
         }
       ]
     }

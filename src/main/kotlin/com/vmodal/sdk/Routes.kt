@@ -1,83 +1,83 @@
 package com.vmodal.sdk
 
 object Routes {
-    const val PREFIX = "/api/external/v1"
-    const val USERS_API_PREFIX = "/api/v1"
+    @JvmField val PREFIX = RoutesGenerated.external_prefix
+    @JvmField val USERS_API_PREFIX = RoutesGenerated.users_api_prefix
 
-    const val externalUploadGetSignedUrl = "/collections/external_upload_get_signed_url"
-    const val externalUploadDone = "/collection/upload/done"
-    // **TODO: Production does not currently expose the five multipart routes below.
+    @JvmField val externalUploadGetSignedUrl = RoutesGenerated.path(RoutesGenerated.ID_COLLECTIONS_VIDEO_UPLOAD_PRESIGN)
+    @JvmField val externalUploadDone = RoutesGenerated.path(RoutesGenerated.ID_COLLECTIONS_VIDEO_UPLOAD_DONE)
+    // Production does not currently expose the five multipart routes below.
     // Keep them for sdk_python contract parity and offline regression coverage, but
-    // do not enable forced multipart live coverage until the backend supports them.**
-    const val externalUploadMultipartCreate = "/collections/external_upload_multipart/create"
-    const val externalUploadMultipartSignParts = "/collections/external_upload_multipart/sign_parts"
-    const val externalUploadMultipartStatus = "/collections/external_upload_multipart/status"
-    const val externalUploadMultipartComplete = "/collections/external_upload_multipart/complete"
-    const val externalUploadMultipartAbort = "/collections/external_upload_multipart/abort"
+    // do not enable forced multipart live coverage until the backend supports them.
+    @JvmField val externalUploadMultipartCreate = RoutesGenerated.path(RoutesGenerated.ID_MULTIPART_CREATE)
+    @JvmField val externalUploadMultipartSignParts = RoutesGenerated.path(RoutesGenerated.ID_MULTIPART_SIGN_PARTS)
+    @JvmField val externalUploadMultipartStatus = RoutesGenerated.path(RoutesGenerated.ID_MULTIPART_STATUS)
+    @JvmField val externalUploadMultipartComplete = RoutesGenerated.path(RoutesGenerated.ID_MULTIPART_COMPLETE)
+    @JvmField val externalUploadMultipartAbort = RoutesGenerated.path(RoutesGenerated.ID_MULTIPART_ABORT)
 
     object Endpoints {
-        const val health = "/health"
-        const val searchClient = "/search"
-        const val groups = "/collection/groups"
-        const val indexationJobs = "/indexation/jobs"
-        const val indexationSubmit = "/indexation/job/create"
-        const val indexationStatus = "/indexation/job/{job_id}"
-        const val indexationDelete = "/indexation/index/delete"
-        const val upload = "/collection/upload"
-        const val uploadFolder = "/upload/folder"
-        // **DEPRECATED:** `/collection/upload/google_drive` remains only for route-table parity. Do not expose it in the SDK.
+        @JvmField val health = RoutesGenerated.path(RoutesGenerated.ID_AUTH_HEALTH)
+        @JvmField val searchClient = RoutesGenerated.path(RoutesGenerated.ID_SEARCHES_SEARCH_VIDEO)
+        @JvmField val groups = RoutesGenerated.path(RoutesGenerated.ID_COLLECTIONS_LIST_GROUPS)
+        @JvmField val indexationJobs = RoutesGenerated.path(RoutesGenerated.ID_INDEXES_JOBS_LIST)
+        @JvmField val indexationSubmit = RoutesGenerated.path(RoutesGenerated.ID_INDEXES_CREATE_INDEX)
+        @JvmField val indexationStatus = RoutesGenerated.path(RoutesGenerated.ID_INDEXES_INDEX_STATUS)
+        @JvmField val indexationDelete = RoutesGenerated.path(RoutesGenerated.ID_INDEXES_DELETE_INDEX)
+        @JvmField val upload = RoutesGenerated.path(RoutesGenerated.ID_COLLECTIONS_UPLOAD_FILE)
+        @JvmField val uploadFolder = RoutesGenerated.path(RoutesGenerated.ID_COLLECTIONS_UPLOAD_FOLDER)
+        // Deprecated route retained only for route-table parity. Do not expose it in the SDK.
         @Deprecated("Google Drive upload is deprecated; use signed videoUpload instead")
-        const val uploadGoogleDriveFolder = "/collection/upload/google_drive"
-        const val uploadMetadataJsonl = "/collection/upload/metadata"
-        const val collectionDescriptionUpdate = "/collection/description/update"
-        const val uploadMetadataItemParquetInternal = "/api/internal/v1/collection/upload/metadata"
-        const val collectionDelete = "/collection/delete"
-        const val collectionAddAssets = "/collection/{collection_id}/assets/create"
-        const val adminUserStats = "/admin/user-stats"
-        const val imageGetUrl = "/image/get_url"
-        const val imageGetUrlBulk = "/image/get_url_bulk"
-        const val imageGetImage = "/image/get_image"
-        const val imageGetImageBulk = "/image/get_image_bulk"
+        @JvmField val uploadGoogleDriveFolder = RoutesGenerated.path(RoutesGenerated.ID_COLLECTIONS_UPLOAD_GOOGLE_DRIVE_FOLDER)
+        @JvmField val uploadMetadataJsonl = RoutesGenerated.path(RoutesGenerated.ID_COLLECTIONS_UPLOAD_METADATA_JSONL)
+        @JvmField val collectionDescriptionUpdate = RoutesGenerated.path(RoutesGenerated.ID_COLLECTIONS_UPDATE_DESCRIPTION)
+        @JvmField val uploadMetadataItemParquetInternal = RoutesGenerated.path(RoutesGenerated.ID_METADATA_INTERNAL_FALLBACK)
+        @JvmField val collectionDelete = RoutesGenerated.path(RoutesGenerated.ID_COLLECTIONS_DELETE)
+        @JvmField val collectionAddAssets = RoutesGenerated.path(RoutesGenerated.ID_COLLECTIONS_ADD_ASSETS)
+        @JvmField val adminUserStats = RoutesGenerated.path(RoutesGenerated.ID_ADMIN_USER_STATS)
+        @JvmField val imageGetUrl = RoutesGenerated.path(RoutesGenerated.ID_IMAGES_GET_URL)
+        @JvmField val imageGetUrlBulk = RoutesGenerated.path(RoutesGenerated.ID_IMAGES_GET_URL_BULK)
+        @JvmField val imageGetImage = RoutesGenerated.path(RoutesGenerated.ID_IMAGES_GET_IMAGE_FROM_URL)
+        @JvmField val imageGetImageBulk = RoutesGenerated.path(RoutesGenerated.ID_IMAGES_GET_IMAGE_BULK_FROM_URLS)
     }
 
     object UsersEndpoints {
-        const val authMe = "/auth/me"
-        const val adminUsage = "/admin/usage"
-        const val adminCacheStats = "/admin/cache/stats"
-        const val r2UploadFile = "/upload_file/"
-        const val r2UploadFolderVideo = "/upload_folder_video/"
+        @JvmField val authMe = RoutesGenerated.path(RoutesGenerated.ID_AUTH_ME)
+        @JvmField val adminUsage = RoutesGenerated.path(RoutesGenerated.ID_ADMIN_USAGE)
+        @JvmField val adminCacheStats = RoutesGenerated.path(RoutesGenerated.ID_ADMIN_CACHE_STATS)
+        @JvmField val r2UploadFile = RoutesGenerated.path(RoutesGenerated.ID_R2_PRESIGN_UPLOAD_FILE)
+        @JvmField val r2UploadFolderVideo = RoutesGenerated.path(RoutesGenerated.ID_R2_PRESIGN_UPLOAD_FOLDER_VIDEO)
     }
 
     val activeEndpoints: Map<String, Pair<String, String>> = linkedMapOf(
-        "auth.health" to ("GET" to Endpoints.health),
-        "auth.auth_check" to ("GET" to Endpoints.health),
-        "searches.search_video" to ("POST" to Endpoints.searchClient),
-        "collections.list_groups" to ("GET" to Endpoints.groups),
-        "collections.upload_metadata_jsonl" to ("POST" to Endpoints.uploadMetadataJsonl),
-        "collections.update_description" to ("POST" to Endpoints.collectionDescriptionUpdate),
-        "collections.delete" to ("DELETE" to Endpoints.collectionDelete),
-        "collections.add_assets" to ("POST" to Endpoints.collectionAddAssets),
-        "indexes.jobs_list" to ("GET" to Endpoints.indexationJobs),
-        "indexes.create_index" to ("POST" to Endpoints.indexationSubmit),
-        "indexes.index_status" to ("GET" to Endpoints.indexationStatus),
-        "indexes.delete_index" to ("DELETE" to Endpoints.indexationDelete),
-        "admin.user_stats" to ("GET" to Endpoints.adminUserStats),
-        "images.get_url" to ("POST" to Endpoints.imageGetUrl),
-        "images.get_url_bulk" to ("POST" to Endpoints.imageGetUrlBulk),
-        "images.get_image_from_url" to ("POST" to Endpoints.imageGetImage),
-        "images.get_image_bulk_from_urls" to ("POST" to Endpoints.imageGetImageBulk),
+        "auth.health" to RoutesGenerated.methodPath(RoutesGenerated.ID_AUTH_HEALTH),
+        "auth.auth_check" to RoutesGenerated.methodPath(RoutesGenerated.ID_AUTH_AUTH_CHECK),
+        "searches.search_video" to RoutesGenerated.methodPath(RoutesGenerated.ID_SEARCHES_SEARCH_VIDEO),
+        "collections.list_groups" to RoutesGenerated.methodPath(RoutesGenerated.ID_COLLECTIONS_LIST_GROUPS),
+        "collections.upload_metadata_jsonl" to RoutesGenerated.methodPath(RoutesGenerated.ID_COLLECTIONS_UPLOAD_METADATA_JSONL),
+        "collections.update_description" to RoutesGenerated.methodPath(RoutesGenerated.ID_COLLECTIONS_UPDATE_DESCRIPTION),
+        "collections.delete" to RoutesGenerated.methodPath(RoutesGenerated.ID_COLLECTIONS_DELETE),
+        "collections.add_assets" to RoutesGenerated.methodPath(RoutesGenerated.ID_COLLECTIONS_ADD_ASSETS),
+        "indexes.jobs_list" to RoutesGenerated.methodPath(RoutesGenerated.ID_INDEXES_JOBS_LIST),
+        "indexes.create_index" to RoutesGenerated.methodPath(RoutesGenerated.ID_INDEXES_CREATE_INDEX),
+        "indexes.index_status" to RoutesGenerated.methodPath(RoutesGenerated.ID_INDEXES_INDEX_STATUS),
+        "indexes.delete_index" to RoutesGenerated.methodPath(RoutesGenerated.ID_INDEXES_DELETE_INDEX),
+        "admin.user_stats" to RoutesGenerated.methodPath(RoutesGenerated.ID_ADMIN_USER_STATS),
+        "images.get_url" to RoutesGenerated.methodPath(RoutesGenerated.ID_IMAGES_GET_URL),
+        "images.get_url_bulk" to RoutesGenerated.methodPath(RoutesGenerated.ID_IMAGES_GET_URL_BULK),
+        "images.get_image_from_url" to RoutesGenerated.methodPath(RoutesGenerated.ID_IMAGES_GET_IMAGE_FROM_URL),
+        "images.get_image_bulk_from_urls" to RoutesGenerated.methodPath(RoutesGenerated.ID_IMAGES_GET_IMAGE_BULK_FROM_URLS),
     )
 
     val disabledEndpoints: Map<String, Pair<String, String>> = linkedMapOf(
-        "collections.upload_folder" to ("POST" to Endpoints.uploadFolder),
-        "indexes.embedding_models" to ("GET" to "/indexes/embedding_models"),
-        "collections.auto_index_get" to ("GET" to "/collection/auto_index"),
-        "collections.auto_index_set" to ("POST" to "/collection/auto_index"),
-        "collections.create" to ("NONE" to ""),
-        "collections.edit" to ("NONE" to ""),
-        "gdrive.private_auth_url" to ("POST" to "/gdrive/private/auth-url"),
-        "gdrive.private_download" to ("POST" to "/gdrive/private/folder/download"),
-        "sql.query" to ("POST" to "/sql/query"),
+        "collections.upload_folder" to RoutesGenerated.methodPath(RoutesGenerated.ID_COLLECTIONS_UPLOAD_FOLDER),
+        "indexes.embedding_models" to RoutesGenerated.methodPath(RoutesGenerated.ID_INDEXES_EMBEDDING_MODELS),
+        "collections.auto_index_get" to RoutesGenerated.methodPath(RoutesGenerated.ID_COLLECTIONS_AUTO_INDEX_GET),
+        "collections.auto_index_set" to RoutesGenerated.methodPath(RoutesGenerated.ID_COLLECTIONS_AUTO_INDEX_SET),
+        "collections.create" to RoutesGenerated.methodPath(RoutesGenerated.ID_COLLECTIONS_CREATE),
+        "collections.edit" to RoutesGenerated.methodPath(RoutesGenerated.ID_COLLECTIONS_EDIT),
+        "gdrive.private_auth_url" to RoutesGenerated.methodPath(RoutesGenerated.ID_GDRIVE_PRIVATE_AUTH_URL),
+        "gdrive.private_download" to RoutesGenerated.methodPath(RoutesGenerated.ID_GDRIVE_PRIVATE_DOWNLOAD),
+        "sql.query" to RoutesGenerated.methodPath(RoutesGenerated.ID_SQL_QUERY),
     )
 
     fun full(path: String): String = addPrefix(path, PREFIX)

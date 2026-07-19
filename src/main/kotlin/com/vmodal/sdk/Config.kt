@@ -1,13 +1,11 @@
 package com.vmodal.sdk
 
-import java.util.Base64
-
 /** @suppress */
-const val PUBLIC_GATEWAY_URL_HASH = "aHR0cHM6Ly9zZWFyY2hhcGktdGVzdC52LW1vZGFsLmNvbQ=="
+@JvmField val PUBLIC_GATEWAY_URL_HASH = RoutesGenerated.PUBLIC_GATEWAY_URL_HASH
 /** @suppress */
-val PUBLIC_GATEWAY_URL = String(Base64.getDecoder().decode(PUBLIC_GATEWAY_URL_HASH), Charsets.UTF_8)
+@JvmField val PUBLIC_GATEWAY_URL = RoutesGenerated.public_gateway_url
 /** @suppress */
-const val DEV_GATEWAY_URL = "http://127.0.0.1:3099"
+@JvmField val DEV_GATEWAY_URL = RoutesGenerated.dev_gateway_url
 
 /**
  * Immutable client configuration.
@@ -125,13 +123,13 @@ data class SdkConfig(
 fun strGatewayBaseUrl(baseUrl: String, mode: String = ""): String {
     val base = baseUrl.trim().trimEnd('/')
     if (base.isBlank() || mode.trim().lowercase() != "gateway") return base
-    val suffix = "/api/v1/proxy/search_api"
+    val suffix = RoutesGenerated.gateway_proxy_suffix
     return if (base.endsWith(suffix)) base else base + suffix
 }
 
 /** @suppress */
 fun strUsersBaseUrl(baseUrl: String): String {
     val base = baseUrl.trim().trimEnd('/')
-    val suffix = "/api/v1/proxy/search_api"
+    val suffix = RoutesGenerated.gateway_proxy_suffix
     return if (base.endsWith(suffix)) base.removeSuffix(suffix) else base
 }
