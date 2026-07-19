@@ -2,19 +2,27 @@ package com.vmodal.sdk.examples.fullapp
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
@@ -30,14 +38,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,14 +74,16 @@ fun FullAppScreen(vm: FullAppViewModel) {
     Scaffold(
         topBar = { TopAppBar(title = { Text("VModal full search app") }) },
     ) { innerPadding ->
-        LazyColumn(
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 150.dp),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
             contentPadding = PaddingValues(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionTitle("1. Configure and authenticate")
                 OutlinedTextField(
                     value = apiKey,
@@ -112,7 +128,7 @@ fun FullAppScreen(vm: FullAppViewModel) {
                 }
             }
 
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionTitle("2. Select the data scope")
                 OutlinedTextField(
                     value = state.collection,
@@ -144,7 +160,7 @@ fun FullAppScreen(vm: FullAppViewModel) {
                 )
             }
 
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionTitle("3. Upload a video")
                 Text(
                     "Selected: ${state.selectedFile}",
@@ -196,7 +212,7 @@ fun FullAppScreen(vm: FullAppViewModel) {
                 }
             }
 
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionTitle("4. Create and inspect the index")
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -223,7 +239,7 @@ fun FullAppScreen(vm: FullAppViewModel) {
                 )
             }
 
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionTitle("5. Search")
                 OutlinedTextField(
                     value = state.query,
@@ -256,28 +272,11 @@ fun FullAppScreen(vm: FullAppViewModel) {
                         Text("Search")
                     }
                 }
-                if (state.searched && state.results.isEmpty()) {
-                    Text("No matching results.")
-                }
             }
 
-            items(state.results, key = SearchItem::id) { result ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(result.title, style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            result.details,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
+            fullAppSearchResults(state)
 
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 if (state.error.isNotBlank()) {
                     Text(state.error, color = MaterialTheme.colorScheme.error)
                 }
@@ -292,6 +291,126 @@ fun FullAppScreen(vm: FullAppViewModel) {
                 ) {
                     Text("Forget API key")
                 }
+            }
+        }
+    }
+}
+
+fun LazyGridScope.fullAppSearchResults(
+    state: FullAppUiState,
+    imageModel: (SearchImage) -> Any? = { it.url },
+) {
+    if (state.action == FullAppAction.SEARCH) {
+        fullWidthResultMessage("Searching and resolving images…")
+        return
+    }
+    if (!state.searched) return
+
+    val returned = if (state.searchReturned < state.searchTotal) {
+        " (${state.searchReturned} returned)"
+    } else {
+        ""
+    }
+    val elapsed = if (state.searchElapsedMs > 0) {
+        " · ${state.searchElapsedMs.toInt()} ms"
+    } else {
+        ""
+    }
+    item(span = { GridItemSpan(maxLineSpan) }) {
+        Text(
+            text = "Showing ${state.images.size} images from ${state.searchTotal} matches$returned$elapsed",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.testTag("search-summary"),
+        )
+    }
+    when {
+        state.searchTotal == 0 -> fullWidthResultMessage("No matching results.")
+        state.images.isEmpty() -> fullWidthResultMessage("No image-backed matches were found.")
+        else -> items(state.images, key = SearchImage::id) { image ->
+            Box(modifier = Modifier.padding(horizontal = 4.dp)) {
+                FullAppSearchImageCard(image, imageModel(image))
+            }
+        }
+    }
+}
+
+private fun LazyGridScope.fullWidthResultMessage(text: String) {
+    item(span = { GridItemSpan(maxLineSpan) }) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+fun FullAppSearchImageCard(image: SearchImage, model: Any? = image.url) {
+    val meta = buildList {
+        image.stream.takeIf { it.isNotBlank() }?.let { add("stream: $it") }
+        image.timestamp.takeIf { it.isNotBlank() }?.let { add("time: $it") }
+        image.score.takeIf { it.isNotBlank() }?.let { add("score: $it") }
+    }.joinToString(" · ")
+    Card(
+        modifier = Modifier.testTag("search-image-${image.id}"),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column {
+            SubcomposeAsyncImage(
+                model = model,
+                contentDescription = "Search result image: ${image.title}",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f),
+                loading = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                    }
+                },
+                error = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.errorContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("Image unavailable", modifier = Modifier.padding(12.dp))
+                    }
+                },
+                success = { SubcomposeAsyncImageContent() },
+            )
+            Text(
+                text = image.title,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            )
+            if (image.filename.isNotBlank() && image.filename != image.title) {
+                Text(
+                    text = image.filename,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 8.dp),
+                )
+            }
+            if (meta.isNotBlank()) {
+                Text(
+                    text = meta,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 8.dp),
+                )
             }
         }
     }

@@ -5,7 +5,8 @@
 2. Resolve the authenticated identity and list its video collections.
 3. Reuse an existing collection or upload the bundled 10-frame sample.
 4. Create an image index and refresh its asynchronous job status.
-5. Search the indexed collection and inspect result fields.
+5. Search the indexed collection and inspect ranked frames in a responsive
+   image grid.
 
 The example deliberately exposes each stage as a separate action. A beginner
 can validate one SDK contract at a time and stop at the first failed stage.
@@ -15,7 +16,9 @@ authentication
   -> accessible collections
   -> existing indexed data OR upload
   -> index ready
-  -> search
+  -> search hits
+  -> one bulk image-URL lookup
+  -> adaptive image grid
 ```
 
 An empty collection list or empty search result is valid. It means the account
@@ -31,7 +34,8 @@ network, or API error.
   VModal administrator
 
 The project uses Kotlin 1.9.24, Android Gradle Plugin 8.4.2, Material 3,
-coroutines, `StateFlow`, and lifecycle-aware Compose state collection.
+coroutines, `StateFlow`, lifecycle-aware Compose state collection, and Coil
+2.6.0 for image loading.
 
 > Never commit an API key, put it in Android resources, `BuildConfig`, Gradle
 > properties, `local.properties`, the manifest, logs, or a deep link. This app
@@ -202,8 +206,8 @@ control, as in the Flutter example.
 1. Keep the default query, `red`, for the bundled colored sample or enter a
    description for your video.
 2. Tap **Search** after the image index is ready.
-3. Inspect up to five cards showing the best title or item ID, source modality,
-   timestamp, and normalized score returned by the API.
+3. Inspect the responsive grid. Each card shows the ranked frame, title,
+   filename, stream, timestamp, and score when those fields are available.
 
 Before every search, the app refreshes the authenticated key's collections,
 checks that the requested collection is visible, and obtains its latest
@@ -219,14 +223,46 @@ val result = client.searches.searchVideo(
     groupName = collectionName,
     streamName = streamName,
     searchSources = listOf("image"),
-    limit = 5,
+    limit = 50,
     versionLancedb = version,
 )
 ```
 
 Search stops locally when the collection is not returned for the current key
 or has no LanceDB version. This avoids silently requesting an unrelated default
-index. A zero-result response is displayed as **No matching results**.
+index. The bounded request returns at most 50 ranked rows. Every row with a
+usable video filename becomes an image candidate, and all candidates are
+resolved with one call:
+
+```kotlin
+val urls = client.images.getUrlBulk(candidateRecords)
+```
+
+Candidate records use `mode=vid_file`, `modality=image`, the selected
+collection/stream, the normalized video basename, and an optional normalized
+13-digit timestamp. The bulk response's `input_index` points into that
+candidate request, not directly into the unfiltered search rows. The app
+validates every index, rejects duplicates and invalid or blank records, then
+restores ranked search order. This prevents a partial or out-of-order bulk
+response from attaching an image to another hit's metadata.
+
+The summary deliberately keeps four values separate:
+
+- total backend matches from `cntTotal`;
+- rows returned in this response from `cntActual`;
+- server search duration from `executionTimeMs`;
+- resolved images currently displayed in the grid.
+
+A zero-match response displays **No matching results**. Matches without a
+usable/resolved image display **No image-backed matches were found**. A decode
+or image-network failure displays **Image unavailable** only in that card;
+successful sibling cards remain visible.
+
+Signed image URLs are temporary. The app obtains fresh URLs for each search,
+keeps them only in ViewModel/UI memory, and clears them when the query, scope,
+credential, upload, or index work changes. Coil fetches the pre-signed URL
+directly without the VModal Bearer header. URLs are never used as card IDs,
+persisted, or logged.
 
 ## Credential and lifecycle behavior
 
@@ -249,15 +285,31 @@ app/src/main/
 ├── AndroidManifest.xml
 └── kotlin/com/vmodal/sdk/examples/fullapp/
     ├── MainActivity.kt          Compose host and light/dark theme
-    ├── FullAppScreen.kt         Staged controls, status, and result cards
-    ├── FullAppViewModel.kt      SDK workflow, state, validation, cancellation
+    ├── FullAppScreen.kt         Staged controls and adaptive image grid
+    ├── FullAppViewModel.kt      Workflow, deterministic image join, lifecycle
     └── AndroidUploadSource.kt   Bundled asset and content-URI adapters
+app/src/test/.../FullAppSearchMappingTest.kt
+                                Offline search/image contract tests
+app/src/androidTest/.../FullAppSearchGridTest.kt
+                                Compose grid and card-state tests
 ```
 
 `FullAppViewModel` runs blocking SDK requests on `Dispatchers.IO`, bridges the
 asynchronous upload callback to a cancellable coroutine, and publishes one
 immutable `StateFlow<FullAppUiState>`. The screen collects it with
 `collectAsStateWithLifecycle()`.
+
+Run the offline tests and debug build from this example directory:
+
+```bash
+./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
+```
+
+With an unlocked API 24+ emulator or device connected, run the Compose tests:
+
+```bash
+./gradlew --no-daemon :app:connectedDebugAndroidTest
+```
 
 ## Test a locally published SDK artifact
 
@@ -310,6 +362,20 @@ timeout policy or restore the job later through `jobsList()`.
 Tap **Refresh collections** and select a name visible to the current API key.
 For a newly uploaded collection, wait until it appears and its image index
 advertises a LanceDB version.
+
+### Search finds matches but no images are displayed
+
+**No image-backed matches were found** means the backend count is non-zero but
+none of the returned rows produced a valid image candidate/URL. Confirm the
+same collection and stream were used for upload, indexing, search, and image
+lookup, then search again to obtain fresh temporary URLs.
+
+### One card says `Image unavailable`
+
+That card's temporary URL may have expired, connectivity may have changed, or
+the image bytes may not decode. Other cards are independent and remain usable.
+Search again to resolve a fresh URL batch; do not copy a VModal API key or
+Authorization header into the image request.
 
 ## Related documentation
 
