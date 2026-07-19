@@ -267,7 +267,7 @@ project switch:
 
 ```bash
 cd uinterface/sdk_android
-gradle --no-daemon clean build publishToMavenLocal
+./gradlew --no-daemon clean build publishToMavenLocal
 
 cd examples/03_fullapp
 ./gradlew --no-daemon :app:assembleDebug \

@@ -276,7 +276,7 @@ multipart upload cannot exceed 10,000 parts.
 From the repository root:
 
 ```bash
-gradle --no-daemon clean build publishToMavenLocal
+./gradlew --no-daemon clean build publishToMavenLocal
 cd examples/02_search
 ./gradlew --no-daemon :app:assembleDebug \
   -PvmodalUseMavenLocal=true -PvmodalSdkVersion=1.0.0

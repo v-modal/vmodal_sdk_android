@@ -4,4 +4,5 @@ local.properties
 *.iml
 
 # Gradle wrappers are executable build inputs and must remain tracked.
+!gradle/wrapper/gradle-wrapper.jar
 !examples/**/gradle/wrapper/gradle-wrapper.jar

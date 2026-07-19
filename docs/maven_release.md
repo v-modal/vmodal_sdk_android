@@ -81,29 +81,31 @@ The current AGP exceptions expire on 2026-08-15; an expired exception makes the
 release scan fail and must be removed by upgrading AGP/Gradle, not extended
 without a new reviewed risk decision.
 
-Both Gradle roots retain independent `gradle/verification-metadata.xml` files
-for later re-enablement. The offline release job resolves IDE source artifacts
-with strict verification through `gradle verifyIdeSources`; the remaining
-release tasks temporarily disable dependency verification. To update metadata
-after an intentional dependency change:
+Both Gradle roots retain independent `gradle/verification-metadata.xml` files.
+The SDK root and Android example each pin Gradle 8.6 with a checked-in wrapper;
+use the wrapper belonging to the root being built. The offline release job
+resolves IDE source artifacts with strict verification through
+`./gradlew verifyIdeSources`; the remaining release tasks temporarily disable
+dependency verification. To update metadata after an intentional dependency
+change:
 
 ```bash
-gradle --write-verification-metadata sha256,pgp help
+./gradlew --write-verification-metadata sha256,pgp help
 ```
 
 Run the command from that root. Generation is bootstrap only: manually review
 repository origins, plugin markers, transitive artifacts, signing keys, and
-every new checksum before committing. Never generate metadata in CI. The
-example wrapper distribution and wrapper JAR checksums remain enforced by
+every new checksum before committing. Never generate metadata in CI. Both
+wrapper distribution and wrapper JAR checksums remain enforced by
 `security_check.sh`.
 
-After review, run `gradle --no-daemon verifyIdeSources` from the SDK root to
+After review, run `./gradlew --no-daemon verifyIdeSources` from the SDK root to
 confirm Android Studio can attach runtime dependency sources.
 
 Generate the resolved dependency report before approval:
 
 ```bash
-gradle --no-daemon --dependency-verification off dependencyReport
+./gradlew --no-daemon --dependency-verification off dependencyReport
 ```
 
 Archive the report, verification metadata checksums, secret-scan result, and
@@ -115,7 +117,7 @@ From `uinterface/sdk_android`:
 
 ```bash
 bash test.sh all
-gradle --no-daemon --dependency-verification off clean test publishToMavenLocal
+./gradlew --no-daemon --dependency-verification off clean test publishToMavenLocal
 cd examples/02_search
 ./gradlew --no-daemon --dependency-verification off \
   :app:assembleDebug :app:assembleRelease \

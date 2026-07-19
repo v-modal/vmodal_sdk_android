@@ -224,6 +224,10 @@ For the complete contract, read [SDK behavior and uploads](docs/sdk_doc.md) and 
 
 The core artifact deliberately avoids Android framework dependencies, which keeps it JVM-testable. The included Android reference app demonstrates Compose, `content://` uploads, lifecycle scopes, and source-project consumption.
 
+Gradle 8.6 is the supported build version and is pinned by the checked-in root
+wrapper. Use `./gradlew` for root builds and Android Studio imports; an installed
+system Gradle, including Gradle 9, is not part of the supported toolchain.
+
 ## Explore the SDK
 
 - [Run the staged full search application](examples/03_fullapp/)
@@ -240,6 +244,7 @@ The core artifact deliberately avoids Android framework dependencies, which keep
 ```bash
 git clone https://github.com/v-modal/vmodal_sdk_android.git
 cd vmodal_sdk_android
+./gradlew --no-daemon help
 bash install.sh check
 bash test.sh all
 ```

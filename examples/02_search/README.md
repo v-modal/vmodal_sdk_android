@@ -100,7 +100,7 @@ against a locally published Maven artifact, first publish from the SDK root:
 
 ```bash
 cd uinterface/sdk_android
-gradle --no-daemon clean build publishToMavenLocal
+./gradlew --no-daemon clean build publishToMavenLocal
 ```
 
 Then build the example with the Maven-local switch and matching version:
