@@ -82,15 +82,16 @@ release scan fail and must be removed by upgrading AGP/Gradle, not extended
 without a new reviewed risk decision.
 
 Both Gradle roots retain independent `gradle/verification-metadata.xml` files.
-The SDK root and Android example each pin Gradle 8.6 with a checked-in wrapper;
-use the wrapper belonging to the root being built. The offline release job
-resolves IDE source artifacts with strict verification through
-`./gradlew verifyIdeSources`; the remaining release tasks temporarily disable
-dependency verification. To update metadata after an intentional dependency
-change:
+The SDK root and Android examples default to lenient verification so missing
+metadata or unavailable signing keys are reported without breaking local builds
+or Android Studio sync. Each root pins Gradle 8.6 with a checked-in wrapper; use
+the wrapper belonging to the root being built. Release build tasks explicitly
+disable dependency verification until the metadata has been reviewed and
+completed. To audit or update metadata after an intentional dependency change:
 
 ```bash
 ./gradlew --write-verification-metadata sha256,pgp help
+./gradlew --no-daemon --dependency-verification strict help
 ```
 
 Run the command from that root. Generation is bootstrap only: manually review

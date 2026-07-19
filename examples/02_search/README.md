@@ -82,6 +82,11 @@ From this directory:
 ./gradlew --no-daemon :app:assembleDebug
 ```
 
+Dependency verification is lenient by default so unavailable signing keys or
+new transitive metadata are reported without blocking Android Studio sync or a
+local build. Use `--dependency-verification strict` only when intentionally
+auditing and updating `gradle/verification-metadata.xml`.
+
 The debug APK is generated under `app/build/outputs/apk/debug/`.
 
 To install it on a connected device or running emulator:
