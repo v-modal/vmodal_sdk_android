@@ -82,9 +82,10 @@ release scan fail and must be removed by upgrading AGP/Gradle, not extended
 without a new reviewed risk decision.
 
 Both Gradle roots retain independent `gradle/verification-metadata.xml` files
-for later re-enablement. Dependency verification is temporarily disabled in
-the release workflow to unblock releases. To update one after an intentional
-dependency change:
+for later re-enablement. The offline release job resolves IDE source artifacts
+with strict verification through `gradle verifyIdeSources`; the remaining
+release tasks temporarily disable dependency verification. To update metadata
+after an intentional dependency change:
 
 ```bash
 gradle --write-verification-metadata sha256,pgp help
@@ -95,6 +96,9 @@ repository origins, plugin markers, transitive artifacts, signing keys, and
 every new checksum before committing. Never generate metadata in CI. The
 example wrapper distribution and wrapper JAR checksums remain enforced by
 `security_check.sh`.
+
+After review, run `gradle --no-daemon verifyIdeSources` from the SDK root to
+confirm Android Studio can attach runtime dependency sources.
 
 Generate the resolved dependency report before approval:
 

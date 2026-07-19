@@ -1,6 +1,10 @@
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinJvm
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.jvm.tasks.Jar
+import org.gradle.jvm.JvmLibrary
+import org.gradle.language.base.artifact.SourcesArtifact
 import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
 
 plugins {
@@ -16,6 +20,20 @@ version = "1.0.0"
 dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.moshi:moshi:1.15.2")
+}
+
+tasks.register("verifyIdeSources") {
+    doLast {
+        val ids = configurations.runtimeClasspath.get().incoming.resolutionResult.allComponents
+            .mapNotNull { it.id as? ModuleComponentIdentifier }
+        val result = dependencies.createArtifactResolutionQuery()
+            .forComponents(ids)
+            .withArtifacts(JvmLibrary::class.java, SourcesArtifact::class.java)
+            .execute()
+        result.resolvedComponents.flatMap { it.getArtifacts(SourcesArtifact::class.java) }
+            .filterIsInstance<ResolvedArtifactResult>()
+            .forEach { it.file }
+    }
 }
 
 tasks.withType<Jar>().configureEach {
