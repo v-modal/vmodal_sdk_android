@@ -2,6 +2,7 @@ package com.vmodal.sdk.examples.fullapp
 
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -16,13 +17,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -74,7 +78,8 @@ class FullAppSearchGridTest {
         compose.onAllNodesWithText("Image unavailable").assertCountEquals(1)
         compose.onNodeWithText("Result 1").assertIsDisplayed()
         compose.onNodeWithText("video_1.mp4").assertIsDisplayed()
-        compose.onNodeWithText("stream: astream · time: 0000000002000 · score: 87.5%").assertExists()
+        compose.onAllNodesWithText("stream: astream · time: 0000000002000 · score: 87.5%")
+            .assertCountEquals(2)
         compose.onNodeWithContentDescription("Search result image: Result 1").assertExists()
     }
 
@@ -128,6 +133,44 @@ class FullAppSearchGridTest {
         compose.setContent { ResultsGrid(state, width = 260, fontScale = 1.8f) }
         compose.onNodeWithTag("search-image-${item.id}").assertIsDisplayed()
         compose.onNodeWithContentDescription("Search result image: $title").assertExists()
+    }
+
+    @Test
+    fun compactFullScreenSectionsDoNotOverlapAndScrollToFooter() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val vm = FullAppViewModel.factory(context).create(FullAppViewModel::class.java)
+        compose.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.width(360.dp).height(640.dp)) {
+                    FullAppScreen(vm)
+                }
+            }
+        }
+
+        assertStacked("1. Configure and authenticate", "Runtime API key", "Configure client", "Resolve auth.me")
+        assertSection("2. Select the data scope", "Collection", "Stream")
+        assertSection("3. Upload a video", "Selected: video_10frames.mp4", "Use sample", "Upload")
+        assertSection("4. Create and inspect the index", "Create index", "Index: not started")
+        assertSection("5. Search", "Search query", "Search")
+
+        compose.onNodeWithTag("full-app-grid").performScrollToNode(hasText("Forget API key"))
+        compose.onNodeWithText("Forget API key").assertIsDisplayed()
+    }
+
+    private fun assertSection(vararg text: String) {
+        assertStacked(*text)
+    }
+
+    private fun assertStacked(vararg text: String) {
+        text.asList().zipWithNext().forEach { (topText, bottomText) ->
+            compose.onNodeWithTag("full-app-grid").performScrollToNode(hasText(bottomText))
+            val top = compose.onNodeWithText(topText).fetchSemanticsNode().boundsInRoot
+            val bottom = compose.onNodeWithText(bottomText).fetchSemanticsNode().boundsInRoot
+            assertTrue(
+                "$topText $top overlaps $bottomText $bottom",
+                top.bottom <= bottom.top,
+            )
+        }
     }
 
     private fun image(index: Int) = SearchImage(

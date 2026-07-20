@@ -78,198 +78,224 @@ fun FullAppScreen(vm: FullAppViewModel) {
             columns = GridCells.Adaptive(minSize = 150.dp),
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(innerPadding)
+                .testTag("full-app-grid"),
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                SectionTitle("1. Configure and authenticate")
-                OutlinedTextField(
-                    value = apiKey,
-                    onValueChange = { apiKey = it },
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Runtime API key") },
-                    supportingText = { Text("Injected by the parent app; never committed.") },
-                    enabled = !busy,
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                )
-                Button(
-                    onClick = {
-                        val hasKey = apiKey.trim().isNotEmpty()
-                        vm.configure(apiKey)
-                        if (hasKey) apiKey = ""
-                    },
-                    enabled = !busy,
-                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text("Configure client")
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
+                    SectionTitle("1. Configure and authenticate")
+                    OutlinedTextField(
+                        value = apiKey,
+                        onValueChange = { apiKey = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Runtime API key") },
+                        supportingText = { Text("Injected by the parent app; never committed.") },
+                        enabled = !busy,
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    )
                     Button(
-                        onClick = vm::resolveIdentity,
-                        enabled = !busy && state.configured,
-                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            val hasKey = apiKey.trim().isNotEmpty()
+                            vm.configure(apiKey)
+                            if (hasKey) apiKey = ""
+                        },
+                        enabled = !busy,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Resolve auth.me")
+                        Text("Configure client")
                     }
-                    OutlinedButton(
-                        onClick = vm::refreshCollections,
-                        enabled = !busy && state.configured,
-                        modifier = Modifier.weight(1f),
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Text("Refresh collections")
+                        Button(
+                            onClick = vm::resolveIdentity,
+                            enabled = !busy && state.configured,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Resolve auth.me")
+                        }
+                        OutlinedButton(
+                            onClick = vm::refreshCollections,
+                            enabled = !busy && state.configured,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Refresh collections")
+                        }
                     }
                 }
             }
 
             item(span = { GridItemSpan(maxLineSpan) }) {
-                SectionTitle("2. Select the data scope")
-                OutlinedTextField(
-                    value = state.collection,
-                    onValueChange = vm::setCollection,
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Collection") },
-                    supportingText = { Text("Must be visible to this API key before search.") },
-                    enabled = !busy,
-                    singleLine = true,
-                )
-                if (state.collectionsLoaded) {
-                    Text(
-                        if (state.collections.isEmpty()) {
-                            "Available collections: none"
-                        } else {
-                            "Available collections: ${state.collections.joinToString()}"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    SectionTitle("2. Select the data scope")
+                    OutlinedTextField(
+                        value = state.collection,
+                        onValueChange = vm::setCollection,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Collection") },
+                        supportingText = { Text("Must be visible to this API key before search.") },
+                        enabled = !busy,
+                        singleLine = true,
+                    )
+                    if (state.collectionsLoaded) {
+                        Text(
+                            if (state.collections.isEmpty()) {
+                                "Available collections: none"
+                            } else {
+                                "Available collections: ${state.collections.joinToString()}"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    OutlinedTextField(
+                        value = state.stream,
+                        onValueChange = vm::setStream,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Stream") },
+                        enabled = !busy,
+                        singleLine = true,
                     )
                 }
-                OutlinedTextField(
-                    value = state.stream,
-                    onValueChange = vm::setStream,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Stream") },
-                    enabled = !busy,
-                    singleLine = true,
-                )
             }
 
             item(span = { GridItemSpan(maxLineSpan) }) {
-                SectionTitle("3. Upload a video")
-                Text(
-                    "Selected: ${state.selectedFile}",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    OutlinedButton(
-                        onClick = vm::useBundledSample,
-                        enabled = !busy,
-                        modifier = Modifier.weight(1f),
+                    SectionTitle("3. Upload a video")
+                    Text(
+                        "Selected: ${state.selectedFile}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Text("Use sample")
+                        OutlinedButton(
+                            onClick = vm::useBundledSample,
+                            enabled = !busy,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Use sample")
+                        }
+                        OutlinedButton(
+                            onClick = { picker.launch(arrayOf("video/*")) },
+                            enabled = !busy,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Choose video")
+                        }
                     }
-                    OutlinedButton(
-                        onClick = { picker.launch(arrayOf("video/*")) },
-                        enabled = !busy,
-                        modifier = Modifier.weight(1f),
+                    LinearProgressIndicator(
+                        progress = state.uploadProgress / 100f,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Text("Choose video")
+                        Button(
+                            onClick = vm::upload,
+                            enabled = !busy,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(if (state.action == FullAppAction.UPLOAD) "Uploading…" else "Upload")
+                        }
+                        OutlinedButton(
+                            onClick = vm::cancelUpload,
+                            enabled = state.action == FullAppAction.UPLOAD,
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                    if (state.uploadedFile.isNotBlank()) {
+                        Text("Uploaded: ${state.uploadedFile}", style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                LinearProgressIndicator(
-                    progress = state.uploadProgress / 100f,
+            }
+
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    SectionTitle("4. Create and inspect the index")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Button(
+                            onClick = vm::createIndex,
+                            enabled = !busy,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Create index")
+                        }
+                        OutlinedButton(
+                            onClick = vm::refreshIndex,
+                            enabled = !busy && state.indexJobId.isNotBlank(),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text("Refresh status")
+                        }
+                    }
+                    Text(
+                        "Index: ${state.indexStatus}${state.indexJobId.takeIf { it.isNotBlank() }?.let { " ($it)" }.orEmpty()}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    SectionTitle("5. Search")
+                    OutlinedTextField(
+                        value = state.query,
+                        onValueChange = vm::setQuery,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Search query") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(
+                            onSearch = {
+                                focus.clearFocus()
+                                if (!busy) vm.search()
+                            },
+                        ),
+                    )
                     Button(
-                        onClick = vm::upload,
-                        enabled = !busy,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(if (state.action == FullAppAction.UPLOAD) "Uploading…" else "Upload")
-                    }
-                    OutlinedButton(
-                        onClick = vm::cancelUpload,
-                        enabled = state.action == FullAppAction.UPLOAD,
-                    ) {
-                        Text("Cancel")
-                    }
-                }
-                if (state.uploadedFile.isNotBlank()) {
-                    Text("Uploaded: ${state.uploadedFile}", style = MaterialTheme.typography.bodySmall)
-                }
-            }
-
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                SectionTitle("4. Create and inspect the index")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Button(
-                        onClick = vm::createIndex,
-                        enabled = !busy,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text("Create index")
-                    }
-                    OutlinedButton(
-                        onClick = vm::refreshIndex,
-                        enabled = !busy && state.indexJobId.isNotBlank(),
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text("Refresh status")
-                    }
-                }
-                Text(
-                    "Index: ${state.indexStatus}${state.indexJobId.takeIf { it.isNotBlank() }?.let { " ($it)" }.orEmpty()}",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                SectionTitle("5. Search")
-                OutlinedTextField(
-                    value = state.query,
-                    onValueChange = vm::setQuery,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Search query") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(
-                        onSearch = {
+                        onClick = {
                             focus.clearFocus()
-                            if (!busy) vm.search()
+                            vm.search()
                         },
-                    ),
-                )
-                Button(
-                    onClick = {
-                        focus.clearFocus()
-                        vm.search()
-                    },
-                    enabled = !busy,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    if (state.action == FullAppAction.SEARCH) {
-                        CircularProgressIndicator(
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp,
-                        )
-                    } else {
-                        Text("Search")
+                        enabled = !busy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (state.action == FullAppAction.SEARCH) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Text("Search")
+                        }
                     }
                 }
             }
@@ -277,19 +303,24 @@ fun FullAppScreen(vm: FullAppViewModel) {
             fullAppSearchResults(state)
 
             item(span = { GridItemSpan(maxLineSpan) }) {
-                if (state.error.isNotBlank()) {
-                    Text(state.error, color = MaterialTheme.colorScheme.error)
-                }
-                Text(state.status, style = MaterialTheme.typography.bodyMedium)
-                TextButton(
-                    onClick = {
-                        apiKey = ""
-                        vm.forgetApiKey()
-                    },
-                    enabled = state.configured,
+                Column(
                     modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text("Forget API key")
+                    if (state.error.isNotBlank()) {
+                        Text(state.error, color = MaterialTheme.colorScheme.error)
+                    }
+                    Text(state.status, style = MaterialTheme.typography.bodyMedium)
+                    TextButton(
+                        onClick = {
+                            apiKey = ""
+                            vm.forgetApiKey()
+                        },
+                        enabled = state.configured,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Forget API key")
+                    }
                 }
             }
         }

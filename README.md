@@ -33,11 +33,15 @@ VModal brings multimodal video search and mobile-friendly uploads to Kotlin with
 | Work that survives beyond one screen | Worker-friendly blocking APIs and async uploads |
 
 > [!TIP]
-> **Building a mobile video experience?** [Get a free beta API key](https://v-modal.com/page/contact.ts) and join the [VModal Discord](https://discord.gg/CRNsdJHg6). We would love to help you ship it.
+> **Building a mobile video experience?** [Get a free beta API key](https://v-modal.com/page/contact.ts) and join the [VModal Discord](https://discord.gg/CRNsdJHg6). 
+
+[SDK docs: v-modal.github.io/vmodal_sdk_android/](https://v-modal.github.io/vmodal_sdk_android/)
+    
+We would love to help you ship it.
 
 ## Kotlin SDK reference
 
-Browse the generated [Kotlin SDK reference](docs_sdk/index.html) for public
+Browse the generated [Kotlin SDK reference](https://v-modal.github.io/vmodal_sdk_android/) for public
 classes, constructors, properties, extension functions, and methods. KDoc beside
 the Kotlin declarations is the content authority. The published reference
 intentionally omits service hosts, endpoint paths, route tables, and
