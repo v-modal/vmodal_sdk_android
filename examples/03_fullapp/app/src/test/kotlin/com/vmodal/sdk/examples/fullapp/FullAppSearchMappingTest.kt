@@ -26,7 +26,7 @@ class FullAppSearchMappingTest {
                 mapOf(
                     "mode" to "vid_file",
                     "group_name" to "videos",
-                    "modality" to "image",
+                    "modality" to "vid_img",
                     "stream_name" to "fallback",
                     "filename" to "video.mp4",
                 ),
@@ -54,12 +54,39 @@ class FullAppSearchMappingTest {
             mapOf(
                 "mode" to "vid_file",
                 "group_name" to "videos",
-                "modality" to "image",
+                "modality" to "vid_img",
                 "stream_name" to "custom",
                 "filename" to "clip.mp4",
                 "ts_unix_13digits" to "1700000000000",
             ),
             timed.record,
+        )
+    }
+
+    @Test
+    fun liveSearchFieldsProduceAnImageLookupRecord() {
+        val candidate = searchCandidates(
+            listOf(
+                mapOf(
+                    "stream" to "astream",
+                    "item_id" to "astream-video_10frames-0000000002000",
+                    "title" to "video_10frames",
+                    "ts_unix" to "0000000002000",
+                ),
+            ),
+            "videos",
+            "fallback",
+        ).single()
+        assertEquals(
+            mapOf(
+                "mode" to "vid_file",
+                "group_name" to "videos",
+                "modality" to "vid_img",
+                "stream_name" to "astream",
+                "filename" to "video_10frames",
+                "ts_unix_13digits" to "0000000002000",
+            ),
+            candidate.record,
         )
     }
 

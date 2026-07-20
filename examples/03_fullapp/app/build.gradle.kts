@@ -65,3 +65,14 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    systemProperty(
+        "vmodalLive03Fullapp",
+        providers.gradleProperty("vmodalLive03Fullapp").getOrElse("false"),
+    )
+    systemProperty(
+        "vmodalFullappFixture",
+        rootProject.file("asset/video_10frames.mp4").absolutePath,
+    )
+}

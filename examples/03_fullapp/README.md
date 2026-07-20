@@ -220,10 +220,13 @@ val version = group?.latestLancedbVersion
 
 val result = client.searches.searchVideo(
     queryText = query,
+    mode = "vid_file",
     groupName = collectionName,
     streamName = streamName,
     searchSources = listOf("image"),
     limit = 50,
+    textEmbScoreMin = 0.0,
+    imageEmbScoreMin = 0.0,
     versionLancedb = version,
 )
 ```
@@ -231,16 +234,17 @@ val result = client.searches.searchVideo(
 Search stops locally when the collection is not returned for the current key
 or has no LanceDB version. This avoids silently requesting an unrelated default
 index. The bounded request returns at most 50 ranked rows. Every row with a
-usable video filename becomes an image candidate, and all candidates are
-resolved with one call:
+usable video filename or indexed `title` becomes an image candidate, and all
+candidates are resolved with one call:
 
 ```kotlin
 val urls = client.images.getUrlBulk(candidateRecords)
 ```
 
-Candidate records use `mode=vid_file`, `modality=image`, the selected
-collection/stream, the normalized video basename, and an optional normalized
-13-digit timestamp. The bulk response's `input_index` points into that
+Candidate records use `mode=vid_file`, `modality=vid_img`, the selected
+collection, the hit's `stream`/`stream_name`, the normalized video basename or
+indexed `title`, and an optional normalized 13-digit timestamp from
+`ts_unix`. The bulk response's `input_index` points into that
 candidate request, not directly into the unfiltered search rows. The app
 validates every index, rejects duplicates and invalid or blank records, then
 restores ranked search order. This prevents a partial or out-of-order bulk
@@ -303,6 +307,13 @@ Run the offline tests and debug build from this example directory:
 
 ```bash
 ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
+```
+
+Run the live upload, indexation, `blue` search, and image retrieval check from
+the examples directory:
+
+```bash
+VMODAL_API_KEY="..." bash test.sh live_03_fullapp
 ```
 
 With an unlocked API 24+ emulator or device connected, run the Compose tests:

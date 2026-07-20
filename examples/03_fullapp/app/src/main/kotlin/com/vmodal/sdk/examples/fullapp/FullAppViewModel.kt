@@ -70,12 +70,12 @@ data class FullAppUiState(
     val error: String = "",
 )
 
-private data class IdentityOutput(
+internal data class IdentityOutput(
     val userType: String,
     val collections: List<String>,
 )
 
-private data class IndexOutput(val jobId: String, val status: String)
+internal data class IndexOutput(val jobId: String, val status: String)
 
 internal data class SearchCandidate(
     val searchRank: Int,
@@ -441,7 +441,7 @@ class FullAppViewModel private constructor(
     }
 }
 
-private class FullAppRepository {
+internal class FullAppRepository {
     private var keys: MutableApiKeyProvider? = null
     private var sdk: Client? = null
     var lastCollections: List<String> = emptyList()
@@ -543,10 +543,13 @@ private class FullAppRepository {
             ?: error("Collection $collection has no advertised LanceDB index version. Create or finish its image index before searching.")
         val response = client.searches.searchVideo(
             queryText = query,
+            mode = "vid_file",
             groupName = collection,
             streamName = stream,
             searchSources = listOf("image"),
             limit = 50,
+            textEmbScoreMin = 0.0,
+            imageEmbScoreMin = 0.0,
             versionLancedb = version,
         )
         val candidates = searchCandidates(response.data, collection, stream)
@@ -581,7 +584,7 @@ internal fun searchCandidates(
     stream: String,
 ): List<SearchCandidate> = values.mapIndexedNotNull { rank, value ->
     val row = strSearchMap(value) ?: return@mapIndexedNotNull null
-    val rawName = strSearchFirst(
+    val filenameAlias = strSearchFirst(
         row,
         "filename",
         "filename_sanitized",
@@ -590,14 +593,20 @@ internal fun searchCandidates(
         "source_path",
         "path",
     )
+    val liveTitle = strSearchFirst(row, "title").takeIf {
+        filenameAlias.isBlank() &&
+            strSearchFirst(row, "item_id").isNotBlank() &&
+            strSearchFirst(row, "ts_unix_13digits", "ts_unix", "timestamp_ms").isNotBlank()
+    }.orEmpty()
+    val rawName = filenameAlias.ifBlank { liveTitle }
     val filename = strSearchFilename(rawName)
     if (filename.isBlank()) return@mapIndexedNotNull null
 
     val record = linkedMapOf<String, Any?>(
         "mode" to "vid_file",
         "group_name" to collection.trim(),
-        "modality" to "image",
-        "stream_name" to strSearchFirst(row, "stream_name").ifBlank { stream.trim() },
+        "modality" to "vid_img",
+        "stream_name" to strSearchFirst(row, "stream", "stream_name").ifBlank { stream.trim() },
         "filename" to filename,
     )
     val stamp = strTimestamp13(strSearchFirst(row, "ts_unix_13digits", "ts_unix", "timestamp_ms"))
