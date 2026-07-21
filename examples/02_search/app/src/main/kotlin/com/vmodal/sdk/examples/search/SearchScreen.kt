@@ -304,7 +304,7 @@ private fun SearchImageCard(image: SearchImage) {
     ) {
         Column {
             SubcomposeAsyncImage(
-                model = image.url,
+                model = image.bytes,
                 contentDescription = image.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier

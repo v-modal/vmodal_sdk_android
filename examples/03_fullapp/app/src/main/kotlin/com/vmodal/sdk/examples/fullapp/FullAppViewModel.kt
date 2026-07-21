@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Base64
 import java.util.Locale
 
 private const val DEFAULT_COLLECTION = "android_example"
@@ -41,6 +42,7 @@ data class SearchImage(
     val stream: String,
     val timestamp: String,
     val score: String,
+    val bytes: ByteArray = byteArrayOf(),
 )
 
 data class FullAppUiState(
@@ -545,13 +547,16 @@ internal class FullAppRepository {
         } else {
             coroutines.images.getUrlBulk(candidates.map { it.record }).records
         }
-        return searchOutput(
+        val output = searchOutput(
             candidates = candidates,
             records = records,
             total = response.cntTotal,
             returned = response.cntActual,
             elapsedMs = response.executionTimeMs,
         )
+        if (output.images.isEmpty()) return output
+        val content = coroutines.images.getImageBulkFromUrls(output.images.map(SearchImage::url)).records
+        return output.copy(images = searchImageBytes(output.images, content))
     }
 
     fun clearCredentials() {
@@ -652,6 +657,24 @@ internal fun searchOutput(
     returned: Int,
     elapsedMs: Double,
 ): SearchOutput = SearchOutput(searchImages(candidates, records), total, returned, elapsedMs)
+
+internal fun searchImageBytes(
+    images: List<SearchImage>,
+    records: List<Map<String, Any?>>,
+): List<SearchImage> {
+    val content = mutableMapOf<Int, ByteArray>()
+    records.forEachIndexed { rowIndex, row ->
+        val rawIndex = row["input_index"]
+        val inputIndex = if (rawIndex == null) rowIndex else intInputIndex(rawIndex)
+        if (inputIndex == null || inputIndex !in images.indices || inputIndex in content) return@forEachIndexed
+        if (row["found"] == false) return@forEachIndexed
+        val encoded = row["content_base64"]?.toString()?.trim().orEmpty()
+        if (encoded.isBlank()) return@forEachIndexed
+        val bytes = runCatching { Base64.getDecoder().decode(encoded) }.getOrNull() ?: byteArrayOf()
+        if (bytes.isNotEmpty()) content[inputIndex] = bytes
+    }
+    return images.mapIndexed { index, image -> image.copy(bytes = content[index] ?: byteArrayOf()) }
+}
 
 internal fun strSearchFilename(value: String): String =
     value.trim().replace('\\', '/').substringAfterLast('/').trim()

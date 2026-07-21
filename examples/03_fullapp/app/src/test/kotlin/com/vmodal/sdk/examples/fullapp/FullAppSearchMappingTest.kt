@@ -171,4 +171,32 @@ class FullAppSearchMappingTest {
         assertEquals(12, output.returned)
         assertEquals(146.5, output.elapsedMs)
     }
+
+    @Test
+    fun imageFailuresExposeOnlyClassAndHttpStatus() {
+        val secret = "https://image.test/frame.jpg?url_hash_jwt=credential"
+        val error = IllegalStateException(secret, RuntimeException("HTTP status 403 for $secret"))
+        val message = strImageLoadFailure(error)
+        assertEquals("Image load failed: cause=IllegalStateException -> RuntimeException status=403", message)
+        assertFalse(secret in message)
+        assertFalse("credential" in message)
+    }
+
+    @Test
+    fun imageContentBulkJoinDecodesAndPreservesFailedCards() {
+        val images = listOf(
+            SearchImage("0", "relative-0", "zero", "0.jpg", "s", "", ""),
+            SearchImage("1", "relative-1", "one", "1.jpg", "s", "", ""),
+        )
+        val values = searchImageBytes(
+            images,
+            listOf(
+                mapOf("input_index" to 1, "found" to true, "content_base64" to "AQID"),
+                mapOf("input_index" to 0, "found" to false, "content_base64" to "BAUG"),
+            ),
+        )
+        assertTrue(values[0].bytes.isEmpty())
+        assertTrue(values[1].bytes.contentEquals(byteArrayOf(1, 2, 3)))
+        assertEquals(listOf("zero", "one"), values.map(SearchImage::title))
+    }
 }

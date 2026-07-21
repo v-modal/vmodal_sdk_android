@@ -1,5 +1,6 @@
 package com.vmodal.sdk.examples.fullapp
 
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -52,6 +53,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
+
+private const val IMAGE_LOG_TAG = "VModalFullAppImage"
+private val HTTP_STATUS_PATTERN = Regex(
+    "(?i)(?:HTTP(?:\\s+status)?|status(?:\\s+code)?)\\D{0,12}([1-5]\\d{2})\\b",
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -329,7 +335,7 @@ fun FullAppScreen(vm: FullAppViewModel) {
 
 fun LazyGridScope.fullAppSearchResults(
     state: FullAppUiState,
-    imageModel: (SearchImage) -> Any? = { it.url },
+    imageModel: (SearchImage) -> Any? = { it.bytes },
 ) {
     if (state.action == FullAppAction.SEARCH) {
         fullWidthResultMessage("Searching and resolving images…")
@@ -376,7 +382,7 @@ private fun LazyGridScope.fullWidthResultMessage(text: String) {
 }
 
 @Composable
-fun FullAppSearchImageCard(image: SearchImage, model: Any? = image.url) {
+fun FullAppSearchImageCard(image: SearchImage, model: Any? = image.bytes) {
     val meta = buildList {
         image.stream.takeIf { it.isNotBlank() }?.let { add("stream: $it") }
         image.timestamp.takeIf { it.isNotBlank() }?.let { add("time: $it") }
@@ -414,6 +420,9 @@ fun FullAppSearchImageCard(image: SearchImage, model: Any? = image.url) {
                         Text("Image unavailable", modifier = Modifier.padding(12.dp))
                     }
                 },
+                onError = { state ->
+                    Log.w(IMAGE_LOG_TAG, strImageLoadFailure(state.result.throwable))
+                },
                 success = { SubcomposeAsyncImageContent() },
             )
             Text(
@@ -444,6 +453,18 @@ fun FullAppSearchImageCard(image: SearchImage, model: Any? = image.url) {
                 )
             }
         }
+    }
+}
+
+internal fun strImageLoadFailure(error: Throwable): String {
+    val causes = generateSequence(error) { it.cause }.take(4).toList()
+    val names = causes.map { it.javaClass.simpleName.ifBlank { "Throwable" } }.distinct()
+    val status = causes.firstNotNullOfOrNull { value ->
+        HTTP_STATUS_PATTERN.find(value.message.orEmpty())?.groupValues?.getOrNull(1)
+    }
+    return buildString {
+        append("Image load failed: cause=").append(names.joinToString(" -> "))
+        if (status != null) append(" status=").append(status)
     }
 }
 

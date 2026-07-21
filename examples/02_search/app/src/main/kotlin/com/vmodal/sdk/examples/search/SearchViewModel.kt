@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Base64
 
 enum class WorkflowAction {
     UPLOAD,
@@ -32,6 +33,7 @@ data class SearchImage(
     val stream: String,
     val timestamp: String,
     val score: String,
+    val bytes: ByteArray = byteArrayOf(),
 )
 
 data class SearchUiState(
@@ -389,7 +391,24 @@ private class SearchRepository {
                 score = firstText(hit, "score", "similarity", "image_score", "text_score"),
             )
         }
-        return SearchOutput(images, result.cntTotal, result.executionTimeMs)
+        val content = if (images.isEmpty()) {
+            emptyList()
+        } else {
+            coroutines.images.getImageBulkFromUrls(images.map(SearchImage::url)).records
+        }
+        val decoded = mutableMapOf<Int, ByteArray>()
+        content.forEachIndexed { index, row ->
+            val inputIndex = (row["input_index"] as? Number)?.toInt() ?: index
+            if (inputIndex !in images.indices || inputIndex in decoded || row["found"] == false) return@forEachIndexed
+            val encoded = row["content_base64"]?.toString()?.trim().orEmpty()
+            val bytes = runCatching { Base64.getDecoder().decode(encoded) }.getOrNull() ?: byteArrayOf()
+            if (bytes.isNotEmpty()) decoded[inputIndex] = bytes
+        }
+        return SearchOutput(
+            images.mapIndexed { index, image -> image.copy(bytes = decoded[index] ?: byteArrayOf()) },
+            result.cntTotal,
+            result.executionTimeMs,
+        )
     }
 
     private suspend fun client(apiKey: String): Client {

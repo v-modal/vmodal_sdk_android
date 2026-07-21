@@ -50,10 +50,14 @@ manifest, or a deep link.
    visual records.
 7. Each hit is converted to the image-coordinate contract used by the Python
    reference SDK: mode, group, stream, filename, and optional 13-digit time.
-8. `images.getUrlBulk()` resolves all usable hits in one request.
-9. Coil loads the URLs into a grid whose cards show available caption,
-   filename, stream, timestamp, and score fields.
-10. The ViewModel clears its API-key provider when credentials are forgotten or
+8. `images.getUrlBulk()` resolves all usable hits in one request. The SDK keeps
+   absolute URLs unchanged and qualifies relative signed-image proxy paths
+   against the normalized search-API base.
+9. `images.getImageBulkFromUrls()` sends those signed locators to the POST-only
+   image-content route and returns encoded image content in request order.
+10. Coil loads the decoded byte arrays into a grid whose cards show available
+   caption, filename, stream, timestamp, and score fields.
+11. The ViewModel clears its API-key provider when credentials are forgotten or
    when the ViewModel is destroyed.
 
 The picker avoids storage permissions and manual filesystem paths. Its provider

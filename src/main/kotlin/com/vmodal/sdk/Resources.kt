@@ -239,7 +239,8 @@ class ImagesResource(private val http: VmodalHttp) {
         val data = linkedMapOf<String, Any?>("mode" to mode, "group_name" to groupName, "modality" to modality, "stream_name" to streamName, "filename" to filename)
         if (tsUnix13digits != null) data["ts_unix_13digits"] = tsUnix13digits.toString()
         if (http.cfg.normalizedMode == "direct" && !userid.isNullOrBlank()) data["userid"] = userid
-        return ImageUrlResponse(http.request("POST", Routes.full(Routes.Endpoints.imageGetUrl), json = data))
+        val raw = http.request("POST", Routes.full(Routes.Endpoints.imageGetUrl), json = data)
+        return ImageUrlResponse(mapAbsoluteImageUrl(raw, http.cfg.normalizedBaseUrl))
     }
 
     /** Resolves multiple image records into temporary signed URLs. */
@@ -247,7 +248,8 @@ class ImagesResource(private val http: VmodalHttp) {
         val safeRecords = if (http.cfg.normalizedMode == "direct") records else records.map { it - "userid" - "user_id" }
         val data = linkedMapOf<String, Any?>("records" to safeRecords)
         if (http.cfg.normalizedMode == "direct" && !userid.isNullOrBlank()) data["userid"] = userid
-        return ImageUrlBulkResponse(http.request("POST", Routes.full(Routes.Endpoints.imageGetUrlBulk), json = data))
+        val raw = http.request("POST", Routes.full(Routes.Endpoints.imageGetUrlBulk), json = data)
+        return ImageUrlBulkResponse(mapAbsoluteImageUrls(raw, http.cfg.normalizedBaseUrl))
     }
 
     /** Downloads bounded image bytes through a signed URL. */

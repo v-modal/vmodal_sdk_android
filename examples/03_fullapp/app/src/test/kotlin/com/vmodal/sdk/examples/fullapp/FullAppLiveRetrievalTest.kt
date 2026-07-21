@@ -48,7 +48,10 @@ class FullAppLiveRetrievalTest {
             val image = requireNotNull(output.images.firstOrNull { stem in it.filename.lowercase() }) {
                 "blue search did not resolve an image for ${source.name}"
             }
-            assertTrue(sdk.images.getImageFromUrl(image.url).isNotEmpty(), "blue result image retrieval was empty")
+            check(image.bytes.isNotEmpty()) { "signed image content retrieval returned an empty body" }
+            check(strEncodedImageKind(image.bytes) != null) {
+                "signed image content is not a supported encoded image"
+            }
             println("full-app live upload/index/blue retrieval passed for $group")
         } finally {
             if (indexed) {
@@ -105,4 +108,62 @@ class FullAppLiveRetrievalTest {
         val okStatus = setOf("success", "succeeded", "done", "completed", "ok")
         val failStatus = setOf("failed", "failure", "error", "cancelled", "canceled", "dead_letter")
     }
+}
+
+private fun strEncodedImageKind(value: ByteArray): String? = when {
+    intPngSize(value) -> "png"
+    intJpegSize(value) -> "jpeg"
+    intGifSize(value) -> "gif"
+    intWebpSize(value) -> "webp"
+    else -> null
+}
+
+private fun intPngSize(value: ByteArray): Boolean =
+    value.size >= 24 &&
+        value.copyOfRange(0, 8).contentEquals(byteArrayOf(-119, 80, 78, 71, 13, 10, 26, 10)) &&
+        intBigEndian(value, 16, 4) > 0 && intBigEndian(value, 20, 4) > 0
+
+private fun intGifSize(value: ByteArray): Boolean =
+    value.size >= 10 &&
+        String(value, 0, 6, Charsets.US_ASCII) in setOf("GIF87a", "GIF89a") &&
+        intLittleEndian(value, 6, 2) > 0 && intLittleEndian(value, 8, 2) > 0
+
+private fun intWebpSize(value: ByteArray): Boolean =
+    value.size >= 30 &&
+        String(value, 0, 4, Charsets.US_ASCII) == "RIFF" &&
+        String(value, 8, 4, Charsets.US_ASCII) == "WEBP"
+
+private fun intJpegSize(value: ByteArray): Boolean {
+    if (value.size < 12 || value[0].toInt().and(255) != 255 || value[1].toInt().and(255) != 216) return false
+    var offset = 2
+    val frames = setOf(192, 193, 194, 195, 197, 198, 199, 201, 202, 203, 205, 206, 207)
+    while (offset + 8 < value.size) {
+        if (value[offset].toInt().and(255) != 255) {
+            offset++
+            continue
+        }
+        val marker = value[offset + 1].toInt().and(255)
+        if (marker == 217 || marker == 218) return false
+        if (marker in frames) {
+            return intBigEndian(value, offset + 5, 2) > 0 && intBigEndian(value, offset + 7, 2) > 0
+        }
+        val size = intBigEndian(value, offset + 2, 2)
+        if (size < 2) return false
+        offset += size + 2
+    }
+    return false
+}
+
+private fun intBigEndian(value: ByteArray, offset: Int, count: Int): Int {
+    if (offset < 0 || count <= 0 || offset + count > value.size) return 0
+    var result = 0
+    repeat(count) { index -> result = result.shl(8) or value[offset + index].toInt().and(255) }
+    return result
+}
+
+private fun intLittleEndian(value: ByteArray, offset: Int, count: Int): Int {
+    if (offset < 0 || count <= 0 || offset + count > value.size) return 0
+    var result = 0
+    repeat(count) { index -> result = result or (value[offset + index].toInt().and(255) shl (8 * index)) }
+    return result
 }

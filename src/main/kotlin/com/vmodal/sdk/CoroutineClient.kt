@@ -514,14 +514,13 @@ class CoroutineImagesResource internal constructor(
         )
         if (tsUnix13digits != null) data["ts_unix_13digits"] = tsUnix13digits.toString()
         if (http.cfg.normalizedMode == "direct" && !userid.isNullOrBlank()) data["userid"] = userid
-        return ImageUrlResponse(
-            http.requestSuspend(
+        val raw = http.requestSuspend(
                 "POST",
                 Routes.full(Routes.Endpoints.imageGetUrl),
                 json = data,
                 fallbackDispatcher = fallbackDispatcher,
             )
-        )
+        return ImageUrlResponse(mapAbsoluteImageUrl(raw, http.cfg.normalizedBaseUrl))
     }
 
     /** Suspending counterpart of [ImagesResource.getUrlBulk]. */
@@ -532,14 +531,13 @@ class CoroutineImagesResource internal constructor(
         val safeRecords = if (http.cfg.normalizedMode == "direct") records else records.map { it - "userid" - "user_id" }
         val data = linkedMapOf<String, Any?>("records" to safeRecords)
         if (http.cfg.normalizedMode == "direct" && !userid.isNullOrBlank()) data["userid"] = userid
-        return ImageUrlBulkResponse(
-            http.requestSuspend(
+        val raw = http.requestSuspend(
                 "POST",
                 Routes.full(Routes.Endpoints.imageGetUrlBulk),
                 json = data,
                 fallbackDispatcher = fallbackDispatcher,
             )
-        )
+        return ImageUrlBulkResponse(mapAbsoluteImageUrls(raw, http.cfg.normalizedBaseUrl))
     }
 
     /** Suspending bounded-byte counterpart of [ImagesResource.getImageFromUrl]. */

@@ -147,3 +147,37 @@ fun strUsersBaseUrl(baseUrl: String): String {
     val suffix = RoutesGenerated.gateway_proxy_suffix
     return if (base.endsWith(suffix)) base.removeSuffix(suffix) else base
 }
+
+/** @suppress */
+internal fun strAbsoluteImageUrl(value: String, baseUrl: String): String {
+    val raw = value.trim()
+    if (raw.isBlank() || raw.matches(Regex("^[A-Za-z][A-Za-z0-9+.-]*:.*"))) return raw
+    val base = baseUrl.trim().trimEnd('/')
+    if (base.isBlank()) return raw
+    if (raw.startsWith("//")) return base.substringBefore(':') + ":" + raw
+
+    val path = raw.trimStart('/')
+    val proxyPath = RoutesGenerated.gateway_proxy_suffix.trimStart('/')
+    return if (path == proxyPath || path.startsWith("$proxyPath/")) {
+        strUsersBaseUrl(base) + "/" + path
+    } else {
+        "$base/$path"
+    }
+}
+
+/** @suppress */
+internal fun mapAbsoluteImageUrl(raw: Map<String, Any?>, baseUrl: String): Map<String, Any?> {
+    val value = raw["url_pre_signed"]?.toString().orEmpty()
+    if (value.isBlank()) return raw
+    return raw + ("url_pre_signed" to strAbsoluteImageUrl(value, baseUrl))
+}
+
+/** @suppress */
+internal fun mapAbsoluteImageUrls(raw: Map<String, Any?>, baseUrl: String): Map<String, Any?> {
+    val records = raw["records"] as? List<*> ?: return raw
+    val values = records.map { value ->
+        val row = (value as? Map<*, *>)?.entries?.associate { it.key.toString() to it.value }
+        if (row == null) value else mapAbsoluteImageUrl(row, baseUrl)
+    }
+    return raw + ("records" to values)
+}

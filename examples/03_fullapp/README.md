@@ -278,9 +278,13 @@ successful sibling cards remain visible.
 
 Signed image URLs are temporary. The app obtains fresh URLs for each search,
 keeps them only in ViewModel/UI memory, and clears them when the query, scope,
-credential, upload, or index work changes. Coil fetches the pre-signed URL
-directly without the VModal Bearer header. URLs are never used as card IDs,
-persisted, or logged.
+credential, upload, or index work changes. The SDK preserves absolute object
+storage URLs and qualifies a relative `url_pre_signed` proxy path against the
+configured search-API base. The returned `/image/get_image` locator is a
+POST-only API contract, not a Coil-loadable GET URL. The example sends all
+resolved locators through `images.getImageBulkFromUrls()`, decodes the returned
+base64 content into byte arrays, and gives those bytes to Coil. URLs are never
+used as card IDs, persisted, or logged.
 
 <a id="fullapp-credentials"></a>
 
@@ -331,6 +335,11 @@ the examples directory:
 ```bash
 VMODAL_API_KEY="..." bash test.sh live_03_fullapp
 ```
+
+The live check exercises both bulk URL resolution and the authenticated bulk
+image-content POST used by the app, then validates that the returned body has a
+supported encoded-image structure and nonzero dimensions. It never prints the
+URL, its query credential, or the runtime Bearer token.
 
 With an unlocked API 24+ emulator or device connected, run the Compose tests:
 
@@ -401,8 +410,10 @@ lookup, then search again to obtain fresh temporary URLs.
 
 That card's temporary URL may have expired, connectivity may have changed, or
 the image bytes may not decode. Other cards are independent and remain usable.
-Search again to resolve a fresh URL batch; do not copy a VModal API key or
-Authorization header into the image request.
+Search again to resolve a fresh URL and image-content batch. Filter Logcat by
+`VModalFullAppImage`; failures report only the exception class chain and an HTTP
+status when one is available. Signed URL values, query strings, exception
+messages, and credentials are not logged.
 
 ## Related documentation
 
