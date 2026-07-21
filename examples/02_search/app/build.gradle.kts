@@ -36,7 +36,7 @@ android {
 
 dependencies {
     if (providers.gradleProperty("vmodalUseMavenLocal").orNull == "true") {
-        val sdkVersion = providers.gradleProperty("vmodalSdkVersion").getOrElse("1.0.0")
+        val sdkVersion = providers.gradleProperty("vmodalSdkVersion").get()
         implementation("com.vmodal:vmodal-sdk-android:$sdkVersion")
     } else {
         implementation(project(":vmodal-sdk-android"))

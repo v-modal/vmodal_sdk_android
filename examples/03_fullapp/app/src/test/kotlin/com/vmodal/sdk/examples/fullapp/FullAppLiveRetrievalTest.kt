@@ -4,6 +4,7 @@ import com.vmodal.sdk.Client
 import com.vmodal.sdk.UploadSource
 import java.io.File
 import java.util.UUID
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -11,8 +12,8 @@ import kotlin.test.assertTrue
 
 class FullAppLiveRetrievalTest {
     @Test
-    fun liveIndexationAndBlueRetrieval() {
-        if (System.getProperty("vmodalLive03Fullapp") != "true") return
+    fun liveIndexationAndBlueRetrieval() = runBlocking {
+        if (System.getProperty("vmodalLive03Fullapp") != "true") return@runBlocking
 
         val key = System.getenv("VMODAL_API_KEY").orEmpty().trim()
         require(key.isNotBlank()) { "VMODAL_API_KEY is required for the full-app live test" }
@@ -31,9 +32,7 @@ class FullAppLiveRetrievalTest {
         try {
             repo.configure(key)
             repo.resolveIdentity()
-            val filename = runBlocking {
-                repo.upload(UploadSource.fromFile(source, "video/mp4"), group, stream) {}
-            }
+            val filename = repo.upload(UploadSource.fromFile(source, "video/mp4"), group, stream) {}
             uploaded = true
             assertEquals(source.name, filename)
 
@@ -67,7 +66,7 @@ class FullAppLiveRetrievalTest {
         }
     }
 
-    private fun liveWaitIndex(repo: FullAppRepository, jobId: String) {
+    private suspend fun liveWaitIndex(repo: FullAppRepository, jobId: String) {
         val end = System.currentTimeMillis() + 1_800_000
         var last = ""
         while (System.currentTimeMillis() <= end) {
@@ -75,29 +74,29 @@ class FullAppLiveRetrievalTest {
             println("full-app indexation status job_id=$jobId status=$last")
             if (last in okStatus) return
             check(last !in failStatus) { "full-app indexation failed with status $last" }
-            Thread.sleep(10_000)
+            delay(10_000)
         }
         error("full-app indexation timed out with status $last")
     }
 
-    private fun liveWaitVersion(sdk: Client, group: String): Int {
+    private suspend fun liveWaitVersion(sdk: Client, group: String): Int {
         val end = System.currentTimeMillis() + 120_000
         while (System.currentTimeMillis() <= end) {
             sdk.collections.listGroups("vid_file").findGroup(group, "vid_file")
                 ?.latestLancedbVersion
                 ?.let { return it }
-            Thread.sleep(3_000)
+            delay(3_000)
         }
         error("full-app collection $group has no advertised LanceDB version")
     }
 
-    private fun liveWaitSearch(repo: FullAppRepository, group: String, stream: String): SearchOutput {
+    private suspend fun liveWaitSearch(repo: FullAppRepository, group: String, stream: String): SearchOutput {
         val end = System.currentTimeMillis() + 180_000
         var last: SearchOutput? = null
         while (System.currentTimeMillis() <= end) {
             last = repo.search("blue", group, stream)
             if (last.images.isNotEmpty()) return last
-            Thread.sleep(5_000)
+            delay(5_000)
         }
         error("full-app blue search returned no images: total=${last?.total}, returned=${last?.returned}")
     }

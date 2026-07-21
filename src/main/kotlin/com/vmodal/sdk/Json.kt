@@ -7,7 +7,7 @@ internal const val MAX_JSON_BYTES = 8L * 1024 * 1024
 
 /** Strict, bounded JSON facade shared by SDK models and low-level integrations. */
 object VmodalJson {
-    private val adapter = Moshi.Builder().build().adapter(Any::class.java).nullSafe()
+    private val adapter = Moshi.Builder().build().adapter(Any::class.java).serializeNulls().nullSafe()
 
     /** Encodes supported values or throws [ValidationFailed]. */
     fun stringify(value: Any?): String = try {

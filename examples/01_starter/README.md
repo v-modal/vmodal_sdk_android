@@ -5,11 +5,23 @@ VModal Android SDK. Each file demonstrates one focused SDK operation so that
 you can copy the relevant function into an Android application, ViewModel,
 repository, or worker without adopting a sample application architecture.
 
-These files are **reference snippets, not standalone programs**. They share the
-package `com.vmodal.sdk.examples`, but this directory does not contain its own
-Gradle build, Android manifest, launcher activity, or command-line entry point.
-To see a complete buildable Android application, use the
-[Jetpack Compose upload → index → search example](../02_search/README.md).
+Every Kotlin file under
+[`src/main/kotlin/com/vmodal/sdk/examples/`](src/main/kotlin/com/vmodal/sdk/examples/)
+is a canonical, compile-checked source. This directory is a standalone Android
+library-style project: it has no launcher or live network task, but it verifies
+the snippets against the current source SDK, Android API 34, and Java 17.
+
+From `uinterface/sdk_android`, compile the catalog without a credential:
+
+```bash
+examples/02_search/gradlew -p examples/01_starter --no-daemon \
+  --dependency-verification strict :compileDebugKotlin
+```
+
+For runnable UI consumers, use the [Compose search example](../02_search/README.md)
+or the [staged full application](../03_fullapp/README.md). Those apps demonstrate
+consumer patterns; your application still owns navigation, UI state,
+accessibility, theming, and its design system.
 
 ## What you can learn here
 
@@ -96,10 +108,11 @@ named arguments in Kotlin even when they refer to the same logical coordinate.
 
 ## Threading and lifecycle rules
 
-Most SDK resource calls are blocking network calls. Call them from
-`Dispatchers.IO`, WorkManager, or another worker thread. Never call
-`auth.me()`, `health()`, search, collection, index, admin, R2, or image methods
-on Android's main thread.
+Prefer `client.coroutines()` from a caller-owned `viewModelScope`,
+`lifecycleScope`, or `CoroutineWorker`. The facade suspends blocking transport
+work away from the main thread and propagates lifecycle cancellation. The
+blocking resource methods remain available for workers and existing callers,
+but must never run on Android's main thread.
 
 The upload extensions have two deliberate execution styles:
 
@@ -113,16 +126,17 @@ main thread. Switch to `Dispatchers.Main` before changing Views or UI-owned
 state. Retain the returned `UploadHandle` while an upload is active so that a
 user action or lifecycle policy can cancel it.
 
-A typical ViewModel integration looks like this:
+A typical ViewModel integration is deliberately small:
 
 ```kotlin
 viewModelScope.launch {
-    val result = withContext(Dispatchers.IO) {
-        searchTrafficVideos(sdk)
-    }
-    // Update StateFlow on the ViewModel coroutine after the blocking call.
+    val result = sdk.coroutines().searches.searchVideo(request)
+    // Publish immutable UI state; lifecycle-aware UI collection is app-owned.
 }
 ```
+
+The complete coupled recipe is
+[`CookbookWorkflow.kt`](src/main/kotlin/com/vmodal/sdk/examples/CookbookWorkflow.kt).
 
 ## Credential and client model
 
@@ -135,13 +149,15 @@ The recommended client startup flow is:
 
 1. Load an already-issued runtime key using an app-owned credential policy.
 2. Create a bootstrap gateway client.
-3. Call `auth.me()` from a worker thread.
+3. Call `client.coroutines().auth.me()` from a caller-owned scope.
 4. Copy the returned user, tenant, and email into the retained client config.
 5. Keep the client and its `MutableApiKeyProvider` at authenticated-session or
    application scope.
 6. Rotate the provider for a replacement key belonging to the same identity.
-7. On logout or account/tenant change, cancel work, clear the key, discard the
-   client, and build a new session.
+7. On logout or account/tenant change, invalidate stale callbacks, cancel work
+   and uploads, cancel account-tagged WorkManager jobs, clear URI grants and
+   result state, close the provider, discard the client, and build a new
+   session.
 
 `Client.unsafeDirect(...)` is intentionally separate. It is only for a trusted
 private network where the downstream service independently authenticates and
@@ -156,13 +172,13 @@ For the complete mobile credential contract, read
 ### Stage 1: prove authentication and connectivity
 
 1. Create the preferred gateway client with
-   [`01_create_gateway_client.kt`](01_create_gateway_client.kt).
+   [`01_create_gateway_client.kt`](src/main/kotlin/com/vmodal/sdk/examples/01_create_gateway_client.kt).
 2. If the app keeps a long-lived authenticated session, adopt key rotation from
-   [`03_rotate_api_key.kt`](03_rotate_api_key.kt).
+   [`03_rotate_api_key.kt`](src/main/kotlin/com/vmodal/sdk/examples/03_rotate_api_key.kt).
 3. Confirm identity and service health with
-   [`03_identity_and_health.kt`](03_identity_and_health.kt).
+   [`03_identity_and_health.kt`](src/main/kotlin/com/vmodal/sdk/examples/03_identity_and_health.kt).
 4. List available groups using
-   [`06_list_groups.kt`](06_list_groups.kt).
+   [`06_list_groups.kt`](src/main/kotlin/com/vmodal/sdk/examples/06_list_groups.kt).
 
 At this point, dependency setup, network permission, authentication, and basic
 data access should all be working.
@@ -170,22 +186,22 @@ data access should all be working.
 ### Stage 2: search existing content
 
 5. Run a minimal text query with
-   [`04_text_search.kt`](04_text_search.kt).
+   [`04_text_search.kt`](src/main/kotlin/com/vmodal/sdk/examples/04_text_search.kt).
 6. Add metadata, date, score, and multimodal controls with
-   [`05_filtered_search.kt`](05_filtered_search.kt).
+   [`05_filtered_search.kt`](src/main/kotlin/com/vmodal/sdk/examples/05_filtered_search.kt).
 7. Resolve returned frame coordinates to images using
-   [`19_image_access.kt`](19_image_access.kt).
+   [`19_image_access.kt`](src/main/kotlin/com/vmodal/sdk/examples/19_image_access.kt).
 
 ### Stage 3: upload from Android
 
 8. Convert a picker URI into a reopenable source with
-   [`08_content_uri_source.kt`](08_content_uri_source.kt).
+   [`ContentUriUploadSource.kt`](src/main/kotlin/com/vmodal/sdk/examples/ContentUriUploadSource.kt).
 9. Start a UI-owned upload with
-   [`09_async_video_upload.kt`](09_async_video_upload.kt).
+   [`09_async_video_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/09_async_video_upload.kt).
 10. Retain and cancel its handle as shown in
-    [`10_cancel_upload.kt`](10_cancel_upload.kt).
+    [`10_cancel_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/10_cancel_upload.kt).
 11. Move long-lived work into WorkManager using
-    [`11_worker_video_upload.kt`](11_worker_video_upload.kt).
+    [`VmodalUploadWorker.kt`](src/main/kotlin/com/vmodal/sdk/examples/VmodalUploadWorker.kt).
 
 ### Stage 4: add advanced data operations
 
@@ -199,32 +215,36 @@ data access should all be working.
 
 | File | Purpose | Important precondition |
 |---|---|---|
-| [`01_create_gateway_client.kt`](01_create_gateway_client.kt) | Bootstrap gateway auth and retain resolved identity | Valid runtime API key |
-| [`02_create_direct_client.kt`](02_create_direct_client.kt) | Construct an explicitly unsafe direct client | Trusted private downstream only |
-| [`03_identity_and_health.kt`](03_identity_and_health.kt) | Print current identity and service health | Configured client |
-| [`03_rotate_api_key.kt`](03_rotate_api_key.kt) | Load, rotate, and clear an app-owned credential | Same-user replacement keys |
-| [`04_text_search.kt`](04_text_search.kt) | Run a minimal video text search | Indexed video collection |
-| [`05_filtered_search.kt`](05_filtered_search.kt) | Search with metadata, sources, dates, and score threshold | Matching indexed metadata and date format |
-| [`06_list_groups.kt`](06_list_groups.kt) | Enumerate video collection groups | Read access |
-| [`07_small_file_upload.kt`](07_small_file_upload.kt) | Use the legacy multipart-form upload endpoint | Small local file |
-| [`08_content_uri_source.kt`](08_content_uri_source.kt) | Adapt an Android URI to a reopenable stream | URI permission and known content length |
-| [`09_async_video_upload.kt`](09_async_video_upload.kt) | Start an asynchronous signed upload | Local file and destination |
-| [`10_cancel_upload.kt`](10_cancel_upload.kt) | Tie an upload handle to an owning component | Defined cancellation policy |
-| [`11_worker_video_upload.kt`](11_worker_video_upload.kt) | Run a blocking upload in a worker | Background thread |
-| [`12_resumable_upload.kt`](12_resumable_upload.kt) | Persist experimental multipart checkpoints | Multipart-capable custom gateway |
-| [`13_adaptive_upload.kt`](13_adaptive_upload.kt) | Select multipart settings from device/network conditions | Multipart-capable custom gateway |
-| [`14_bulk_video_upload.kt`](14_bulk_video_upload.kt) | Upload several sources as one async batch operation | Reopenable files and destination |
-| [`15_metadata_jsonl_upload.kt`](15_metadata_jsonl_upload.kt) | Append JSONL metadata through the metadata pipeline | Valid JSONL contract |
-| [`17_collection_mutations.kt`](17_collection_mutations.kt) | Add assets, update metadata, and preview deletion | Existing collection/assets |
-| [`18_index_lifecycle.kt`](18_index_lifecycle.kt) | Create, inspect, and preview deletion of an index | Existing collection data |
-| [`19_image_access.kt`](19_image_access.kt) | Resolve one or many image records and download bytes | Valid image coordinates |
-| [`20_admin_and_r2.kt`](20_admin_and_r2.kt) | Read operational stats and request an upload key | Privileged account |
+| [`01_create_gateway_client.kt`](src/main/kotlin/com/vmodal/sdk/examples/01_create_gateway_client.kt) | Bootstrap gateway auth and retain resolved identity | Valid runtime API key |
+| [`02_create_direct_client.kt`](src/main/kotlin/com/vmodal/sdk/examples/02_create_direct_client.kt) | Construct an explicitly unsafe direct client | Trusted private downstream only |
+| [`03_identity_and_health.kt`](src/main/kotlin/com/vmodal/sdk/examples/03_identity_and_health.kt) | Print current identity and service health | Configured client |
+| [`03_rotate_api_key.kt`](src/main/kotlin/com/vmodal/sdk/examples/03_rotate_api_key.kt) | Load, rotate, and clear an app-owned credential | Same-user replacement keys |
+| [`04_text_search.kt`](src/main/kotlin/com/vmodal/sdk/examples/04_text_search.kt) | Run a minimal video text search | Indexed video collection |
+| [`05_filtered_search.kt`](src/main/kotlin/com/vmodal/sdk/examples/05_filtered_search.kt) | Search with metadata, sources, dates, and score threshold | Matching indexed metadata and date format |
+| [`06_list_groups.kt`](src/main/kotlin/com/vmodal/sdk/examples/06_list_groups.kt) | Enumerate video collection groups | Read access |
+| [`07_small_file_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/07_small_file_upload.kt) | Use the legacy multipart-form upload endpoint | Small local file |
+| [`08_content_uri_source.kt`](src/main/kotlin/com/vmodal/sdk/examples/08_content_uri_source.kt) | Adapt an Android URI to a reopenable stream | URI permission and known content length |
+| [`09_async_video_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/09_async_video_upload.kt) | Start an asynchronous signed upload | Local file and destination |
+| [`10_cancel_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/10_cancel_upload.kt) | Tie an upload handle to an owning component | Defined cancellation policy |
+| [`11_worker_video_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/11_worker_video_upload.kt) | Run a blocking upload in a worker | Background thread |
+| [`12_resumable_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/12_resumable_upload.kt) | Persist experimental multipart checkpoints | Multipart-capable custom gateway |
+| [`13_adaptive_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/13_adaptive_upload.kt) | Select multipart settings from device/network conditions | Multipart-capable custom gateway |
+| [`14_bulk_video_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/14_bulk_video_upload.kt) | Upload several sources as one async batch operation | Reopenable files and destination |
+| [`15_metadata_jsonl_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/15_metadata_jsonl_upload.kt) | Append JSONL metadata through the metadata pipeline | Valid JSONL contract |
+| [`17_collection_mutations.kt`](src/main/kotlin/com/vmodal/sdk/examples/17_collection_mutations.kt) | Add assets, update metadata, and preview deletion | Existing collection/assets |
+| [`18_index_lifecycle.kt`](src/main/kotlin/com/vmodal/sdk/examples/18_index_lifecycle.kt) | Create, inspect, and preview deletion of an index | Existing collection data |
+| [`19_image_access.kt`](src/main/kotlin/com/vmodal/sdk/examples/19_image_access.kt) | Resolve one or many image records and download bytes | Valid image coordinates |
+| [`20_admin_and_r2.kt`](src/main/kotlin/com/vmodal/sdk/examples/20_admin_and_r2.kt) | Read operational stats and request an upload key | Privileged account |
+| [`ContentUriUploadSource.kt`](src/main/kotlin/com/vmodal/sdk/examples/ContentUriUploadSource.kt) | Validate, retain access to, and reopen a `content://` URI | Persistable grant for durable work |
+| [`ClassicAndroidIntegration.kt`](src/main/kotlin/com/vmodal/sdk/examples/ClassicAndroidIntegration.kt) | Own coroutine calls and callback handles outside an Activity or Fragment | Lifecycle-owned scope and explicit `close()` |
+| [`VmodalUploadWorker.kt`](src/main/kotlin/com/vmodal/sdk/examples/VmodalUploadWorker.kt) | Validate account identity, reopen a URI, and bound reconciled retries | Account tag, URI grant, and app-owned client provider |
+| [`CookbookWorkflow.kt`](src/main/kotlin/com/vmodal/sdk/examples/CookbookWorkflow.kt) | Keep upload, index, version selection, search, and bulk image mapping coupled | One immutable `CookbookScope` |
 
 ## Detailed walkthroughs
 
 ### 01 — Create a gateway client
 
-[`01_create_gateway_client.kt`](01_create_gateway_client.kt) demonstrates the
+[`01_create_gateway_client.kt`](src/main/kotlin/com/vmodal/sdk/examples/01_create_gateway_client.kt) demonstrates the
 normal mobile-client bootstrap. `Client(baseUrl, token)` creates a gateway
 client, `auth.me()` validates the bearer key and returns its mapped identity,
 and `bootstrap.cfg.copy(...)` retains the same transport configuration while
@@ -241,7 +261,7 @@ the lifetime of the retained client.
 
 ### 02 — Create a direct client
 
-[`02_create_direct_client.kt`](02_create_direct_client.kt) calls
+[`02_create_direct_client.kt`](src/main/kotlin/com/vmodal/sdk/examples/02_create_direct_client.kt) calls
 `Client.unsafeDirect()` with an explicit base URL and user ID. It also shows
 transport configuration through `timeoutMillis` and `maxRetries`.
 
@@ -253,7 +273,7 @@ example 01 instead.
 
 ### 03 — Read identity and health
 
-[`03_identity_and_health.kt`](03_identity_and_health.kt) performs two blocking
+[`03_identity_and_health.kt`](src/main/kotlin/com/vmodal/sdk/examples/03_identity_and_health.kt) performs two blocking
 GET operations. `auth.me()` verifies which user the current credential maps to;
 `health()` reports service status and version. Use this pair as an early
 integration diagnostic before investigating search coordinates or upload data.
@@ -271,7 +291,7 @@ backend deployment issue.
 
 ### 03 — Rotate a runtime API key
 
-[`03_rotate_api_key.kt`](03_rotate_api_key.kt) separates responsibilities:
+[`03_rotate_api_key.kt`](src/main/kotlin/com/vmodal/sdk/examples/03_rotate_api_key.kt) separates responsibilities:
 
 - `ApiKeyStore` represents app-owned persistence;
 - `ApiKeyBackend` represents the authenticated backend refresh call;
@@ -291,7 +311,7 @@ network or disk I/O.
 
 ### 04 — Run a minimal text search
 
-[`04_text_search.kt`](04_text_search.kt) uses the convenient named-argument
+[`04_text_search.kt`](src/main/kotlin/com/vmodal/sdk/examples/04_text_search.kt) uses the convenient named-argument
 overload of `searchVideo()`. It first resolves the exact authenticated video
 group and its latest advertised LanceDB version, then searches its stream,
 limits the response to 20 hits, and prints both the returned count and total
@@ -311,7 +331,7 @@ remain available in raw maps.
 
 ### 05 — Search with filters and multiple signals
 
-[`05_filtered_search.kt`](05_filtered_search.kt) constructs a `SearchRequest`
+[`05_filtered_search.kt`](src/main/kotlin/com/vmodal/sdk/examples/05_filtered_search.kt) constructs a `SearchRequest`
 when the query needs more than the convenience overload. The sample combines:
 
 - text query `forklift`;
@@ -331,7 +351,7 @@ date fields.
 
 ### 06 — List collection groups
 
-[`06_list_groups.kt`](06_list_groups.kt) lists groups in `vid_file` mode,
+[`06_list_groups.kt`](src/main/kotlin/com/vmodal/sdk/examples/06_list_groups.kt) lists groups in `vid_file` mode,
 prints the server-reported total, and exposes typed `GroupItem` records. Use
 `findGroup()` to resolve an exact name and `latestLancedbVersion` to select the
 search index advertised for that authenticated collection.
@@ -342,7 +362,7 @@ the app.
 
 ### 07 — Upload a small file through the legacy form endpoint
 
-[`07_small_file_upload.kt`](07_small_file_upload.kt) calls `uploadFile()` with
+[`07_small_file_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/07_small_file_upload.kt) calls `uploadFile()` with
 a local `File`, destination coordinates, description, and tags. This is the
 legacy multipart-form endpoint and is intended only for small files.
 
@@ -353,7 +373,7 @@ state before manually retrying.
 
 ### 08 — Convert an Android content URI
 
-[`08_content_uri_source.kt`](08_content_uri_source.kt) adapts a picker-provided
+[`08_content_uri_source.kt`](src/main/kotlin/com/vmodal/sdk/examples/08_content_uri_source.kt) adapts a picker-provided
 `content://` URI to the SDK's platform-neutral `UploadSource` contract.
 
 The adapter:
@@ -375,7 +395,7 @@ not reused for different bytes.
 
 ### 09 — Start an asynchronous video upload
 
-[`09_async_video_upload.kt`](09_async_video_upload.kt) converts a local file to
+[`09_async_video_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/09_async_video_upload.kt) converts a local file to
 an `UploadSource`, starts `videoUploadAsync()`, reports progress, and handles
 success or failure. The return value is an `UploadHandle`; retain it while the
 upload is active.
@@ -387,7 +407,7 @@ state and dispatch UI-only changes to the main thread.
 
 ### 10 — Cancel an owned upload
 
-[`10_cancel_upload.kt`](10_cancel_upload.kt) wraps the active handle in an
+[`10_cancel_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/10_cancel_upload.kt) wraps the active handle in an
 `UploadOwner`. `start()` replaces the stored handle with a new operation, while
 `stop()` cancels active network work and clears the reference.
 
@@ -402,7 +422,7 @@ retaining and cancelling one operation.
 
 ### 11 — Upload from a worker
 
-[`11_worker_video_upload.kt`](11_worker_video_upload.kt) uses the blocking
+[`11_worker_video_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/11_worker_video_upload.kt) uses the blocking
 `videoUpload()` counterpart. It is suitable inside `CoroutineWorker.doWork()`
 with an IO context, a `Worker`, another background executor, or a JVM test. It
 must never run on Android's main thread.
@@ -415,7 +435,7 @@ checking server state.
 
 ### 12 — Resume experimental multipart uploads
 
-[`12_resumable_upload.kt`](12_resumable_upload.kt) explicitly enables
+[`12_resumable_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/12_resumable_upload.kt) explicitly enables
 multipart upload, enables resume behavior, and persists checkpoints below
 `noBackupFilesDir`. Recreating the same source, destination, options, and
 `FileUploadSessionStore` allows the SDK to reconcile stored checkpoint data
@@ -433,7 +453,7 @@ app-private and excluded from routine backup in this example.
 
 ### 13 — Select adaptive multipart options
 
-[`13_adaptive_upload.kt`](13_adaptive_upload.kt) translates current Android
+[`13_adaptive_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/13_adaptive_upload.kt) translates current Android
 conditions into stable SDK enums, asks `AdaptiveUploadPolicy` which preset it
 would select, and returns options that let the upload resolve the same policy.
 
@@ -448,7 +468,7 @@ gateway requirement as example 12 applies.
 
 ### 14 — Upload several videos
 
-[`14_bulk_video_upload.kt`](14_bulk_video_upload.kt) maps local files to
+[`14_bulk_video_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/14_bulk_video_upload.kt) maps local files to
 reopenable sources and calls `videoUploadBulkAsync()`. The aggregate handle can
 cancel the batch, aggregate progress reports a batch percentage, and the
 success response reports the total uploaded count.
@@ -460,7 +480,7 @@ state may be easier to observe and resume than one UI-owned batch.
 
 ### 15 — Upload JSONL metadata
 
-[`15_metadata_jsonl_upload.kt`](15_metadata_jsonl_upload.kt) creates a
+[`15_metadata_jsonl_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/15_metadata_jsonl_upload.kt) creates a
 multipart file part with `filePart()` and appends JSONL metadata to an image
 collection. `allowOverlap = false` asks the backend to reject overlapping input
 according to its metadata contract.
@@ -472,7 +492,7 @@ replaying the same file.
 
 ### 17 — Mutate a collection safely
 
-[`17_collection_mutations.kt`](17_collection_mutations.kt) demonstrates three
+[`17_collection_mutations.kt`](src/main/kotlin/com/vmodal/sdk/examples/17_collection_mutations.kt) demonstrates three
 independent operations:
 
 - add existing asset IDs to a collection;
@@ -487,7 +507,7 @@ common list; production code can retain and model the typed responses directly.
 
 ### 18 — Manage index lifecycle
 
-[`18_index_lifecycle.kt`](18_index_lifecycle.kt) creates a new video index,
+[`18_index_lifecycle.kt`](src/main/kotlin/com/vmodal/sdk/examples/18_index_lifecycle.kt) creates a new video index,
 uses the returned `jobId` to inspect indexation status, and previews deletion of
 an older version.
 
@@ -499,7 +519,7 @@ the destructive form.
 
 ### 19 — Resolve and download images
 
-[`19_image_access.kt`](19_image_access.kt) demonstrates both single and bulk
+[`19_image_access.kt`](src/main/kotlin/com/vmodal/sdk/examples/19_image_access.kt) demonstrates both single and bulk
 image URL resolution.
 
 `downloadImage()` sends complete image coordinates, checks the `found` flag,
@@ -515,7 +535,7 @@ shows that correlation logic.
 
 ### 20 — Read admin and R2 information
 
-[`20_admin_and_r2.kt`](20_admin_and_r2.kt) gathers usage, user, and cache
+[`20_admin_and_r2.kt`](src/main/kotlin/com/vmodal/sdk/examples/20_admin_and_r2.kt) gathers usage, user, and cache
 statistics, then requests presigned upload information for an object-storage
 coordinate. These calls require an account with the corresponding permissions.
 

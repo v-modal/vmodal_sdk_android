@@ -427,6 +427,7 @@ private fun CollectionsResource.multipartPutOne(
                 options.partTimeoutSeconds * 1000,
                 handle,
                 onProgress,
+                idx + 1,
             )
             val expected = result.localMd5.ifBlank { md5Hex(source, offset, length) }
             if (result.etag.isBlank() || result.etag.lowercase() != expected.lowercase()) {
@@ -547,12 +548,23 @@ private fun CollectionsResource.uploadAwait(
     timeoutMillis: Long? = null,
     handle: UploadHandle,
     onProgress: (UploadProgress) -> Unit = {},
+    attempt: Int = 1,
 ): SignedUploadResult {
     handle.ensureActive()
     val result = AtomicReference<SignedUploadResult>()
     val error = AtomicReference<Exception>()
     val latch = CountDownLatch(1)
-    signedUploads.enqueue(source, url, method, offset, length, headers, timeoutMillis, handle, onProgress, { result.set(it); latch.countDown() }, { error.set(it); latch.countDown() })
+    val success = { value: SignedUploadResult -> result.set(value); latch.countDown() }
+    val failure = { value: Exception -> error.set(value); latch.countDown() }
+    if (signedUploads is OkHttpSignedUploadTransport) {
+        signedUploads.enqueueDiagnostic(
+            source, url, method, offset, length, headers, timeoutMillis, handle, onProgress, success, failure, attempt
+        )
+    } else {
+        signedUploads.enqueue(
+            source, url, method, offset, length, headers, timeoutMillis, handle, onProgress, success, failure
+        )
+    }
     val waitMillis = timeoutMillis?.coerceAtMost(Long.MAX_VALUE - 5_000)?.plus(5_000) ?: TimeUnit.HOURS.toMillis(24)
     if (!latch.await(waitMillis, TimeUnit.MILLISECONDS)) {
         handle.cancel()

@@ -7,20 +7,16 @@ import com.vmodal.sdk.Client
 import com.vmodal.sdk.MutableApiKeyProvider
 import com.vmodal.sdk.PUBLIC_GATEWAY_URL
 import com.vmodal.sdk.UploadSource
-import com.vmodal.sdk.videoUploadAsync
+import com.vmodal.sdk.VideoUploadEvent
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 enum class WorkflowAction {
     UPLOAD,
@@ -138,10 +134,8 @@ class SearchViewModel private constructor(private val repo: SearchRepository) : 
                 )
             }
             try {
-                val fileName = withContext(Dispatchers.IO) {
-                    repo.upload(cleanKey, requireNotNull(input), cleanGroup, cleanStream) { progress ->
-                        mutableState.update { it.copy(uploadProgress = progress) }
-                    }
+                val fileName = repo.upload(cleanKey, requireNotNull(input), cleanGroup, cleanStream) { progress ->
+                    mutableState.update { it.copy(uploadProgress = progress) }
                 }
                 mutableState.update {
                     it.copy(action = null, uploadProgress = 100, uploadedFile = fileName)
@@ -182,9 +176,7 @@ class SearchViewModel private constructor(private val repo: SearchRepository) : 
                 )
             }
             try {
-                val created = withContext(Dispatchers.IO) {
-                    repo.createIndex(cleanKey, cleanGroup, cleanStream)
-                }
+                val created = repo.createIndex(cleanKey, cleanGroup, cleanStream)
                 require(created.jobId.isNotBlank()) { "Index creation returned no job ID." }
                 mutableState.update {
                     it.copy(indexJobId = created.jobId, indexStatus = created.status.ifBlank { "queued" })
@@ -192,7 +184,7 @@ class SearchViewModel private constructor(private val repo: SearchRepository) : 
 
                 val end = System.currentTimeMillis() + INDEX_TIMEOUT_MS
                 while (System.currentTimeMillis() <= end) {
-                    val current = withContext(Dispatchers.IO) { repo.indexStatus(created.jobId) }
+                    val current = repo.indexStatus(created.jobId)
                     val status = current.status.trim().lowercase().ifBlank { "unknown" }
                     mutableState.update { it.copy(indexStatus = status) }
                     if (status in INDEX_OK) {
@@ -242,9 +234,7 @@ class SearchViewModel private constructor(private val repo: SearchRepository) : 
                 )
             }
             try {
-                val output = withContext(Dispatchers.IO) {
-                    repo.search(cleanKey, cleanQuery, cleanGroup, cleanStream)
-                }
+                val output = repo.search(cleanKey, cleanQuery, cleanGroup, cleanStream)
                 mutableState.update {
                     it.copy(
                         action = null,
@@ -312,36 +302,30 @@ private class SearchRepository {
         group: String,
         stream: String,
         onProgress: (Int) -> Unit,
-    ): String = suspendCancellableCoroutine { continuation ->
-        val handle = client(apiKey).collections.videoUploadAsync(
+    ): String {
+        var completed = ""
+        client(apiKey).coroutines().collections.videoUploadEvents(
             source = source,
             collectionName = group,
             subCollectionName = stream,
             mode = "vid_file",
             modality = "vid_raw",
-            onProgress = {
-                if (continuation.isActive) onProgress(it.percent)
-            },
-            onSuccess = { result ->
-                if (continuation.isActive) {
-                    if (result.uploaded) {
-                        continuation.resume(result.fileName.ifBlank { source.fileName })
-                    } else {
-                        continuation.resumeWithException(
-                            IllegalStateException("Upload did not complete: ${result.raw}"),
-                        )
+        ).collect { event ->
+            when (event) {
+                is VideoUploadEvent.Progress -> onProgress(event.progress.percent)
+                is VideoUploadEvent.Completed -> {
+                    check(event.response.uploaded) {
+                        "Upload did not complete: ${event.response.raw}"
                     }
+                    completed = event.response.fileName.ifBlank { source.fileName }
                 }
-            },
-            onFailure = { error ->
-                if (continuation.isActive) continuation.resumeWithException(error)
-            },
-        )
-        continuation.invokeOnCancellation { handle.cancel() }
+            }
+        }
+        return completed.ifBlank { error("Upload completed without a result.") }
     }
 
-    fun createIndex(apiKey: String, group: String, stream: String): IndexOutput {
-        val result = client(apiKey).indexes.createIndex(
+    suspend fun createIndex(apiKey: String, group: String, stream: String): IndexOutput {
+        val result = client(apiKey).coroutines().indexes.createIndex(
             mode = "vid_file",
             groupName = group,
             streamName = stream,
@@ -353,19 +337,20 @@ private class SearchRepository {
         return IndexOutput(result.jobId, result.status)
     }
 
-    fun indexStatus(jobId: String): IndexOutput {
+    suspend fun indexStatus(jobId: String): IndexOutput {
         val result = requireNotNull(sdk) { "Authenticate before checking index status." }
-            .indexes.indexStatus(jobId)
+            .coroutines().indexes.indexStatus(jobId)
         return IndexOutput(result.jobId.ifBlank { jobId }, result.status)
     }
 
-    fun search(apiKey: String, query: String, group: String, stream: String): SearchOutput {
+    suspend fun search(apiKey: String, query: String, group: String, stream: String): SearchOutput {
         val client = client(apiKey)
-        val item = client.collections.listGroups("vid_file").findGroup(group, "vid_file")
+        val coroutines = client.coroutines()
+        val item = coroutines.collections.listGroups("vid_file").findGroup(group, "vid_file")
             ?: error("Collection $group is not available for this API key. Choose a listed video collection.")
         val version = item.latestLancedbVersion
             ?: error("Collection $group has no advertised LanceDB index version. Finish its image index before searching.")
-        val result = client.searches.searchVideo(
+        val result = coroutines.searches.searchVideo(
             queryText = query,
             mode = "vid_file",
             groupName = group,
@@ -383,7 +368,7 @@ private class SearchRepository {
             return SearchOutput(emptyList(), result.cntTotal, result.executionTimeMs)
         }
 
-        val urls = client.images.getUrlBulk(candidates.map { it.second }).records
+        val urls = coroutines.images.getUrlBulk(candidates.map { it.second }).records
         val images = urls.mapIndexedNotNull { index, row ->
             val inputIndex = (row["input_index"] as? Number)?.toInt() ?: index
             val url = row["url_pre_signed"]?.toString().orEmpty()
@@ -407,8 +392,7 @@ private class SearchRepository {
         return SearchOutput(images, result.cntTotal, result.executionTimeMs)
     }
 
-    @Synchronized
-    private fun client(apiKey: String): Client {
+    private suspend fun client(apiKey: String): Client {
         val provider = keys ?: MutableApiKeyProvider(apiKey).also { keys = it }
         provider.rotate(apiKey)
         sdk?.let { return it }
@@ -417,7 +401,7 @@ private class SearchRepository {
             baseUrl = PUBLIC_GATEWAY_URL,
             apiKeyProvider = provider,
         )
-        val me = authClient.auth.me()
+        val me = authClient.coroutines().auth.me()
         val userId = requireNotNull(me.userId) { "auth/me returned no user_id" }
         return Client(
             authClient.cfg.copy(

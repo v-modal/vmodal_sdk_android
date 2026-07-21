@@ -11,6 +11,26 @@ backend, storage, endpoint-ownership, credential-rotation, and artifact gates
 have evidence. The workflow is manual and all publishing jobs require approval
 from the protected `sdk-android-production` environment.
 
+## Pull-request CI authority boundary
+
+`.github/workflows/sdk_android_ci.yml` is the credential-free pull-request
+gate. It has only `contents: read`, disables persisted checkout credentials,
+uses immutable action commits, and never enters the production environment or
+references live/release secrets. The separate release workflow remains manual
+and protected.
+
+The `sdk_core` check runs route and policy checks, the normal SDK test
+lifecycle, strict dependency verification, Dokka, checked-in documentation
+validation, and publication to a run-specific Maven repository under the
+runner temporary directory. Only after that succeeds do `clean_consumer`,
+`search_example`, and `fullapp_example` download and checksum the exact
+run-ID/source-SHA artifact. These four check names are the branch-protection
+handoff; renaming one requires updating branch protection in the same rollout.
+
+No pull-request check requires an API key, release credential, emulator, or
+Android device. Fork pull requests run the same offline jobs with read-only
+caches. Only a successful push to `dev` may write the Gradle action cache.
+
 ## Credential boundaries
 
 Configure separate credentials; never reuse one credential across boundaries:
@@ -81,24 +101,38 @@ The current AGP exceptions expire on 2026-08-15; an expired exception makes the
 release scan fail and must be removed by upgrading AGP/Gradle, not extended
 without a new reviewed risk decision.
 
-Both Gradle roots retain independent `gradle/verification-metadata.xml` files.
-The SDK root and Android examples default to lenient verification so missing
-metadata or unavailable signing keys are reported without breaking local builds
-or Android Studio sync. Each root pins Gradle 8.6 with a checked-in wrapper; use
-the wrapper belonging to the root being built. Release build tasks explicitly
-disable dependency verification until the metadata has been reviewed and
-completed. To audit or update metadata after an intentional dependency change:
+The SDK root, standalone consumer, search example, and full-app example retain
+reviewed `gradle/verification-metadata.xml` files. CI always passes
+`--dependency-verification strict`; it never generates metadata or falls back
+to `off` or `lenient`. The root and search example own the reviewed Gradle 8.6
+wrapper. The full app delegates to that search wrapper, and the standalone
+consumer uses the root wrapper.
+
+The standalone consumer and full-app gates use complete SHA-256 inventories
+with signature lookup disabled so fork CI does not depend on external keyserver
+availability. This does not relax artifact verification: every resolved
+third-party file is checksummed, while the commit-specific SDK candidate is
+verified by the downloaded Maven manifest and source-SHA record. Root and
+search-example signature policy remains unchanged.
+
+To update metadata after an intentional dependency change, run the narrowest
+affected task locally with `--write-verification-metadata sha256,pgp` (or
+`sha256` when the repository does not publish signatures), then rerun it in
+strict mode. For example:
 
 ```bash
 ./gradlew --write-verification-metadata sha256,pgp help
 ./gradlew --no-daemon --dependency-verification strict help
 ```
 
-Run the command from that root. Generation is bootstrap only: manually review
-repository origins, plugin markers, transitive artifacts, signing keys, and
-every new checksum before committing. Never generate metadata in CI. Both
-wrapper distribution and wrapper JAR checksums remain enforced by
-`security_check.sh`.
+Run the command from the affected Gradle root. Generation is bootstrap only:
+manually review repository origins, plugin markers, transitive artifacts,
+signing keys, ignored keys, and every new checksum before committing. The
+`com.vmodal:vmodal-sdk-android:1.0.0` trust entry is intentionally coordinate
+exact because candidate bytes change between commits; the CI SHA-256 manifest
+provides their provenance and is rechecked after download. Never generate
+metadata in CI. Wrapper distribution, distribution hash, JAR hash, executable
+bits, and full-app delegation remain enforced by `security_check.sh`.
 
 After review, run `./gradlew --no-daemon verifyIdeSources` from the SDK root to
 confirm Android Studio can attach runtime dependency sources.
@@ -117,18 +151,16 @@ advisory-scan result with the release evidence.
 From `uinterface/sdk_android`:
 
 ```bash
+bash test.sh ci
 bash test.sh all
-./gradlew --no-daemon --dependency-verification off clean test publishToMavenLocal
-cd examples/02_search
-./gradlew --no-daemon --dependency-verification off \
-  :app:assembleDebug :app:assembleRelease \
-  -PvmodalUseMavenLocal=true -PvmodalSdkVersion=1.0.0
 ```
 
-Confirm the requested version agrees in `build.gradle.kts` and
-`VMODAL_SDK_VERSION`, the main JAR and source JAR contain `META-INF/LICENSE`,
-and no APK/artifact contains a bearer, provider key, signing key, registry
-credential, or Cloudflare credential.
+`bash test.sh ci /absolute/empty/maven/repository` preserves the isolated Maven
+repository for manual inspection; the directory must be new or empty. The
+dispatcher confirms the requested version agrees in `build.gradle.kts`,
+`VMODAL_SDK_VERSION`, POM, and repository path; checksums every Maven file;
+checks `META-INF/LICENSE` in the binary and source JARs; compiles the standalone
+consumer; and tests/builds both demos without live credentials.
 
 ## Exact-commit publication
 

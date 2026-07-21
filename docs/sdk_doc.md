@@ -9,6 +9,12 @@ For exact Kotlin signatures and linked types, use the generated
 and intentionally excludes raw service hosts, endpoint paths, route tables, and
 implementation source.
 
+For runtime integration across Compose/ViewModel, classic Views, `content://`,
+WorkManager, upload → index → search coupling, typed UI states, and credential
+cleanup, start with the [Android integration cookbook](android_integration_cookbook.md).
+The consuming application owns UI state, navigation, accessibility, theming,
+and its design system.
+
 ## Runtime security contract
 
 Ordinary API requests automatically retry only `GET` and `HEAD`, for recognized
@@ -48,7 +54,8 @@ credentials supplied by their application backend.
 
 Keep these three rules in mind:
 
-1. Use a worker thread for blocking SDK calls.
+1. Prefer `Client.coroutines()` for new Kotlin code. Use a worker thread only
+   for a remaining blocking SDK call.
 2. Stream Android `content://` URIs; do not read a complete video into memory.
 3. Start with default upload settings. Add persistent resume or adaptive tuning
    only after the basic upload works.
@@ -92,30 +99,33 @@ video in memory.
 If the content behind a URI can change without changing its URI or size, also
 set `versionTag` to a provider generation or last-modified value.
 
-## Step 2: start an asynchronous upload
+## Step 2: collect upload progress
 
 ```kotlin
-import com.vmodal.sdk.videoUploadAsync
+import com.vmodal.sdk.VideoUploadEvent
 
 val source = videoSource(context, videoUri, "video.mp4")
 
-val handle = sdk.collections.videoUploadAsync(
+sdk.coroutines().collections.videoUploadEvents(
     source = source,
     collectionName = "my_collection",
     subCollectionName = "astream",
-    onProgress = { progress ->
-        println("Uploaded ${progress.percent}%")
-    },
-    onSuccess = { result ->
-        println("Uploaded to ${result.destPath}")
-    },
-    onFailure = { error ->
-        error.printStackTrace()
-    },
-)
+).collect { event ->
+    when (event) {
+        is VideoUploadEvent.Progress -> println("Uploaded ${event.progress.percent}%")
+        is VideoUploadEvent.Completed -> println("Uploaded to ${event.response.destPath}")
+    }
+}
 ```
 
-This is enough for a first upload. Every file size uses one signed upload by
+This cold Flow starts one upload each time it is collected. Collect it once for
+one operation. If several screens need the same state, collect once in an
+application-owned scope and expose `stateIn`, `shareIn`, or a repository
+`StateFlow`. The SDK does not own an application or UI scope.
+
+Existing callback code can continue to use `videoUploadAsync(...)` and retain
+its returned `UploadHandle`; the callback API remains supported for
+operation-by-operation migration. Every file size uses one signed upload by
 default. Multipart is never selected automatically by file size.
 
 The `/api/external/v1/collections/external_upload_multipart/*` route family is
@@ -123,42 +133,58 @@ not available on the production gateway. `VideoUploadOptions(multipart = true)`
 is an explicit experimental opt-in for a custom gateway with the complete
 route family. A missing route produces a clear `FeatureDisabled` error.
 
-The callbacks run off the Android main thread. Switch to `Dispatchers.Main`
-before changing views or other main-thread-only state.
+Collect from caller-owned `viewModelScope`, `lifecycleScope`, or a worker. The
+SDK never hard-codes `Dispatchers.Main`; the application owns UI state and
+lifecycle-aware collection.
 
 ## Step 3: support cancellation
 
-Keep the returned `UploadHandle` while the upload is active:
+Cancel the caller-owned collection job:
 
 ```kotlin
-handle.cancel()
+uploadJob.cancel()
 ```
 
-Cancellation stops active calls and prevents new retries, signing, completion,
-and finalization. Call it when the user presses Cancel or at a lifecycle
-boundary where the upload should no longer continue.
+Collector cancellation cancels the underlying upload handle, stops active
+calls, and prevents new retries, signing, completion, and finalization. Do not
+catch and wrap `CancellationException`. Callback integrations can still call
+`UploadHandle.cancel()` directly.
 
 Do not cancel automatically when leaving a screen if the intended product
 behavior is a background upload. Use WorkManager for that case.
 
 ## Step 4: move long uploads to WorkManager
 
-`videoUpload()` is the blocking counterpart intended for workers and tests:
+Use `CoroutineWorker` and collect the same Flow. Worker cancellation propagates
+through collection to the active upload:
 
 ```kotlin
-import com.vmodal.sdk.videoUpload
-
-val result = sdk.collections.videoUpload(
-    source = source,
-    collectionName = "my_collection",
-    subCollectionName = "astream",
-    onProgress = { println("Uploaded ${it.percent}%") },
-)
+override suspend fun doWork(): Result = try {
+    sdk.coroutines().collections.videoUploadEvents(
+        source,
+        collectionName = "my_collection",
+        subCollectionName = "astream",
+    ).collect { event ->
+        if (event is VideoUploadEvent.Progress) {
+            setProgress(workDataOf("progress" to event.progress.percent))
+        }
+    }
+    Result.success()
+} catch (error: CancellationException) {
+    throw error
+}
 ```
 
-Never call the blocking form on the Android main thread. WorkManager owns
-background and reboot scheduling; the SDK owns signing, streaming, retries,
-multipart completion, and checkpoint reconciliation.
+Never convert cancellation into `Result.retry()`. Apply a bounded retry only to
+appropriate transient transport failures or HTTP `408`, `429`, `500`, `502`,
+`503`, and `504`; reconcile an ambiguous mutation before replay. The complete
+compile-checked pattern is
+[`VmodalUploadWorker.kt`](../examples/01_starter/src/main/kotlin/com/vmodal/sdk/examples/VmodalUploadWorker.kt).
+
+WorkManager owns background and reboot scheduling; the SDK owns signing,
+streaming, cancellation, multipart completion, and checkpoint reconciliation.
+The blocking `videoUpload()` remains available for existing worker and Java
+integrations but must never run on the Android main thread.
 
 ## Step 5: resume experimental multipart after process death
 
@@ -257,7 +283,8 @@ app-private file first, then use `UploadSource.fromFile(file)`.
 
 ### Progress updates do not change the UI
 
-Upload callbacks run on a worker thread. Post UI state to the main dispatcher.
+Collect in `viewModelScope` and expose immutable UI state. Existing callback
+integrations must post main-thread-only state through their app-owned scope.
 
 ### An upload restarts after the app process dies
 
@@ -276,18 +303,48 @@ multipart upload cannot exceed 10,000 parts.
 From the repository root:
 
 ```bash
-./gradlew --no-daemon clean build publishToMavenLocal
-cd examples/02_search
-./gradlew --no-daemon :app:assembleDebug \
-  -PvmodalUseMavenLocal=true -PvmodalSdkVersion=1.0.0
+cd uinterface/sdk_android
+bash test.sh ci
+bash test.sh all
 ```
 
-The local suite is offline and needs no emulator or credential. The live CI
-gate is `.github/workflows/sdk_android_test_release.yml`; it runs a causally
+The `ci` command publishes the tested `com.vmodal:vmodal-sdk-android` bytes to
+a temporary isolated Maven repository, verifies their SHA-256 manifest, compiles
+the standalone Kotlin/JVM consumer with a fresh Gradle home, and builds both
+Android examples from that exact coordinate. Pass an absolute new or empty
+repository path to preserve the artifact: `bash test.sh ci /tmp/vmodal-maven`.
+All CI Gradle tasks use strict dependency verification and no credential.
+
+The normal `test` task includes the executable model/route regression suites
+and the deterministic transport integration suite. The transport suite binds
+only to ephemeral loopback ports and normally completes in a few seconds. It
+uses the real URL-connection and signed-upload transports to verify bearer and
+trusted-identity boundaries, credential rotation, safe-method retries,
+mutation non-retry behavior, terminal redirects, timeouts, typed failures,
+exact JSON/form/multipart/binary encoding, response bounds, and presigned-host
+credential isolation. It does not read a live API key or contact an external
+host.
+
+The pull-request gate is `.github/workflows/sdk_android_ci.yml`; it is offline,
+read-only, and needs no emulator or credential. The separate release workflow
+`.github/workflows/sdk_android_test_release.yml` runs a causally
 connected signed upload, index creation, bounded status poll, fixture search,
 index deletion, collection deletion, and absence checks, plus image and bulk
 smoke coverage. Multipart protocol behavior is verified offline until its
 production routes exist.
 
+## Opt-in network diagnostics
+
+Structured network diagnostics are disabled by default. Applications can attach a `DiagnosticSink`
+with `SdkConfig.withDiagnostics(...)` to observe sanitized request-start, response, and failure
+events across gateway, users API, and signed-upload attempts. The SDK removes raw URLs, headers,
+bodies, credentials, signatures, exception messages, and uploaded bytes before sink delivery.
+
+See [Redacted network diagnostics](network_diagnostics.md) for event ordering, retry correlation,
+bounded text previews, the Kotlin/JVM-safe Logcat adapter, and log-retention responsibilities.
+
 For individual methods and response types, continue to the
-[API quick reference](../DOC_REF.md).
+[API quick reference](../DOC_REF.md). For ViewModel ownership, cold-Flow
+sharing, migration, and cancellation guarantees, read
+[Coroutines and upload Flow](coroutines.md) and the
+[Android integration cookbook](android_integration_cookbook.md).

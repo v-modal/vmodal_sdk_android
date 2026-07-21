@@ -1,3 +1,60 @@
+## Prompt to start
+
+```text
+Set up and validate the Android application in
+`uinterface/sdk_android/examples/03_fullapp/` as a complete Android example for
+the local VModal Android SDK.
+
+Before editing, inspect the existing SDK, full-app example, starter snippets,
+scripts, tests, and documentation. Reuse the current implementation and improve
+it in place; do not replace working components or duplicate SDK logic inside
+the example.
+
+Requirements:
+- Keep the default Gradle project dependency on the SDK at `../..`; preserve
+  the existing optional Maven Local verification path.
+- Use Kotlin, Jetpack Compose, coroutines, `StateFlow`, and lifecycle-aware
+  state collection with Java 17, compile SDK 34, and minimum SDK 24.
+- Provide a simple runnable flow for an API key supplied at runtime: configure
+  the client, call `auth.me()`, list video collections, upload a selected
+  `content://` URI or bundled sample with progress and cancellation,
+  create/check an image index, search the selected collection, resolve result
+  images in one bulk request, and display them in a responsive grid.
+- Use the coroutine facade from caller-owned scopes and collect UI state with
+  lifecycle awareness; do not hard-code a main dispatcher inside SDK calls.
+  Keep collection, stream, index-job, search-hit, and resolved-image contracts
+  explicitly coupled so data from one scope cannot appear under another.
+- Keep credentials in memory only. Never hard-code, persist, print, or commit
+  API keys, bearer tokens, or presigned URLs. Do not attach the VModal bearer
+  token when loading presigned image URLs.
+- Use Android's Storage Access Framework for user-selected videos; do not add
+  broad storage permissions or depend on device filesystem paths.
+- Keep the example beginner-friendly and small. Use the public typed SDK API,
+  preserve request/response contracts, handle loading, empty, error, and
+  cleanup states, and cancel/clear SDK resources when the ViewModel is cleared
+  or the authenticated identity changes.
+- Update `examples/03_fullapp/README.md` when setup steps or behavior change.
+- Use the repository scripts and pinned Gradle/JDK setup. Do not create another
+  environment or replace the reviewed Gradle wrapper.
+
+From `uinterface/sdk_android`, verify the SDK with:
+
+  bash install.sh check
+  bash test.sh test
+  bash run.sh sim
+
+Then verify the full app with:
+
+  cd examples/03_fullapp
+  ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
+
+With an unlocked API 24+ emulator or device available, also run
+`./gradlew --no-daemon :app:connectedDebugAndroidTest`. Report the files
+changed, validation results, and any device or platform check that could not be
+run with the exact blocker. Do not claim a live API flow passed unless it was
+tested with a valid runtime key.
+```
+
 <div align="center">
   <img src="assets/vmodal-logo.svg" alt="VModal" width="88">
   &nbsp;&nbsp;&nbsp;&nbsp;
@@ -10,6 +67,7 @@
   <img src="https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white" alt="Java 17">
   <img src="https://img.shields.io/badge/Gradle-8.6-02303A?logo=gradle&logoColor=white" alt="Gradle 8.6">
   <img src="https://img.shields.io/badge/license-Apache%202.0-6C63FF" alt="Apache License 2.0">
+  <a href="https://github.com/arita37/vmx_api/actions/workflows/sdk_android_ci.yml"><img src="https://github.com/arita37/vmx_api/actions/workflows/sdk_android_ci.yml/badge.svg?branch=dev" alt="Android SDK CI"></a>
 </div>
 
 <br>
@@ -27,10 +85,16 @@ VModal brings multimodal video search and mobile-friendly uploads to Kotlin with
 | “Find the red car entering the parking lot” | Semantic video and image search |
 | Search words spoken or shown on screen | ASR and OCR search sources |
 | Upload from the system photo picker | Streaming `content://` URI support |
-| A cancel action that really cancels | `UploadHandle` with progress and cancellation |
+| A cancel action that really cancels | Cold upload Flow plus callback `UploadHandle` compatibility |
 | Compose, Views, or your own design system | A UI-free Kotlin client |
 | Existing authentication and DI | App-owned runtime credentials—no login UI imposed |
-| Work that survives beyond one screen | Worker-friendly blocking APIs and async uploads |
+| Work that survives beyond one screen | `CoroutineWorker` plus cancellation-aware upload Flow |
+
+Start with the [Android integration cookbook](docs/android_integration_cookbook.md)
+for the capability map, one coupled upload → index → search recipe, Compose and
+classic lifecycle patterns, `content://`, WorkManager, typed failures, and
+account-switch cleanup. Demo UI remains application-owned: the SDK publishes no
+navigation, screens, themes, accessibility policy, or design system.
 
 > [!TIP]
 > **Building a mobile video experience?** [Get a free beta API key](https://v-modal.com/page/contact.ts) and join the [VModal Discord](https://discord.gg/CRNsdJHg6). 
@@ -47,6 +111,11 @@ the Kotlin declarations is the content authority. The published reference
 intentionally omits service hosts, endpoint paths, route tables, and
 implementation source; route synchronization is checked by a separate
 regression tool.
+
+Network diagnostics are disabled by default. For opt-in, SDK-sanitized request-start, response,
+failure, retry, timing, and signed-upload events—including a small Android Logcat binding—see the
+[redacted network diagnostics guide](docs/network_diagnostics.md). There is no unredacted mode, and
+uploaded bytes, raw URLs, credentials, headers, bodies, and exception messages never reach the sink.
 
 ## Start in minutes
 
@@ -89,49 +158,45 @@ Load the key through your app's authenticated backend or secure, app-owned stora
 import com.vmodal.sdk.Client
 import com.vmodal.sdk.MutableApiKeyProvider
 import com.vmodal.sdk.SdkConfig
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 val keys = MutableApiKeyProvider(apiKeyLoadedByYourApp)
 
-val vmodal = withContext(Dispatchers.IO) {
-    val bootstrap = Client(SdkConfig(apiKeyProvider = keys))
-    val me = bootstrap.auth.me()
+val bootstrap = Client(SdkConfig(apiKeyProvider = keys))
+val me = bootstrap.coroutines().auth.me()
 
-    Client(
-        bootstrap.cfg.copy(
-            userId = requireNotNull(me.userId),
-            tenantId = me.tenantId.orEmpty(),
-            email = me.email.orEmpty(),
-        )
+val vmodal = Client(
+    bootstrap.cfg.copy(
+        userId = requireNotNull(me.userId),
+        tenantId = me.tenantId.orEmpty(),
+        email = me.email.orEmpty(),
     )
-}
+)
 ```
 
 Keep `keys` and `vmodal` at application or authenticated-session scope so Activities, ViewModels, and workers share the same identity and key rotations.
 
 ## Search video from a ViewModel
 
-Blocking SDK calls belong on `Dispatchers.IO`. Bring only the result back to your UI state:
+The coroutine facade is preferred for new Kotlin code. The ViewModel owns the
+scope; the SDK owns no lifecycle or UI dispatcher:
 
 ```kotlin
 viewModelScope.launch {
-    val results = withContext(Dispatchers.IO) {
-        val groups = vmodal.collections.listGroups("vid_file")
-        val group = groups.findGroup("travel-diaries", "vid_file")
-            ?: error("Collection is not available for this API key")
-        val version = group.latestLancedbVersion
-            ?: error("Collection has no searchable LanceDB version")
+    val api = vmodal.coroutines()
+    val groups = api.collections.listGroups("vid_file")
+    val group = groups.findGroup("travel-diaries", "vid_file")
+        ?: error("Collection is not available for this API key")
+    val version = group.latestLancedbVersion
+        ?: error("Collection has no searchable LanceDB version")
 
-        vmodal.searches.searchVideo(
-            queryText = "the cyclist crossing the bridge at sunset",
-            groupName = group.groupName,
-            streamName = "astream",
-            searchSources = listOf("ocr", "asr", "image"),
-            limit = 20,
-            versionLancedb = version,
-        )
-    }
+    val results = api.searches.searchVideo(
+        queryText = "the cyclist crossing the bridge at sunset",
+        groupName = group.groupName,
+        streamName = "astream",
+        searchSources = listOf("ocr", "asr", "image"),
+        limit = 20,
+        versionLancedb = version,
+    )
 
     println("${results.cntActual} moments found")
     results.data.forEach(::println)
@@ -147,44 +212,48 @@ The response stays typed where the contract is stable and preserves `raw: Map<St
 
 ## Upload from an Android picker
 
-Convert the selected `content://` URI into a reopenable `UploadSource` using the [`ContentResolver` adapter](examples/01_starter/08_content_uri_source.kt), then start an asynchronous signed upload:
+Convert the selected `content://` URI into a reopenable `UploadSource` using the [`ContentResolver` adapter](examples/01_starter/src/main/kotlin/com/vmodal/sdk/examples/ContentUriUploadSource.kt), then collect one signed upload:
 
 ```kotlin
+import com.vmodal.sdk.VideoUploadEvent
+
 val source = contentUriSource(
     context = applicationContext,
     uri = selectedVideoUri,
     fileName = "weekend-ride.mp4",
 )
 
-val upload = vmodal.collections.videoUploadAsync(
+vmodal.coroutines().collections.videoUploadEvents(
     source = source,
     collectionName = "travel-diaries",
     subCollectionName = "mobile-uploads",
-    onProgress = { value ->
-        println("Uploading ${value.percent}%")
-    },
-    onSuccess = { result ->
-        println("Ready: ${result.destPath}")
-    },
-    onFailure = { error ->
-        error.printStackTrace()
-    },
-)
-
-// Connect this to your Compose or View cancel action when needed:
-// upload.cancel()
+).collect { event ->
+    when (event) {
+        is VideoUploadEvent.Progress -> println("Uploading ${event.progress.percent}%")
+        is VideoUploadEvent.Completed -> println("Ready: ${event.response.destPath}")
+    }
+}
 ```
 
-The SDK streams the video instead of loading it into memory. Upload callbacks run off the main thread; switch to `Dispatchers.Main` before changing Views or Compose state.
+The Flow is cold: every collection starts a new upload. Collect once in a
+caller-owned scope. If multiple consumers need one operation, share app state
+with `stateIn`, `shareIn`, or a repository `StateFlow`. Cancelling collection
+cancels the upload. The SDK streams the video instead of loading it into memory.
+
+Existing integrations may keep `videoUploadAsync()` and its `UploadHandle`, or
+the blocking `videoUpload()` on a worker thread, while migrating one operation
+at a time.
 
 Signed single upload is the production default for every file size. Multipart upload is experimental and must be enabled explicitly with `VideoUploadOptions(multipart = true)`; it fails with `FeatureDisabled` when the gateway does not expose the complete multipart route family.
 
 ## Made for Android lifecycles
 
-- Use `viewModelScope` or `lifecycleScope` for search and collection operations.
+- Use `Client.coroutines()` from `viewModelScope` or `lifecycleScope` for new Kotlin search and collection operations.
+- Collect UI state with lifecycle awareness (`collectAsStateWithLifecycle` or `repeatOnLifecycle`).
 - Feed picker results through `ContentResolver` without copying the whole file into memory.
-- Use `videoUploadAsync()` for UI-driven uploads and retain its `UploadHandle` for cancellation.
-- Use the blocking `videoUpload()` inside WorkManager or another worker thread.
+- Collect `videoUploadEvents()` once for UI-driven uploads; collector cancellation reaches the upload handle.
+- Use `CoroutineWorker` for durable uploads. Never retry cancellation, and bound retries to transient failures.
+- Keep callback `videoUploadAsync()` and blocking `videoUpload()` for existing consumers during migration.
 - Keep the SDK UI-free: Jetpack Compose and classic Views are both first-class consumers.
 - Rotate a same-user credential without rebuilding the client: `keys.rotate(freshKey)`.
 - On logout or account switch, cancel work, clear upload persistence, call `keys.clear()`, and build a new client for the next identity.
@@ -238,6 +307,8 @@ system Gradle, including Gradle 9, is not part of the supported toolchain.
 - [Run the Android upload → index → search app](examples/02_search/)
 - [Copy the Kotlin starter examples](examples/01_starter/)
 - [Read the upload and WorkManager guide](docs/sdk_doc.md)
+- [Use coroutines and upload Flow](docs/coroutines.md)
+- [Follow the Android integration cookbook](docs/android_integration_cookbook.md)
 - [Manage API keys safely](docs/manage_api_key.md)
 - [Build the complete upload → index → search experience](docs/search_app.md)
 - [Browse the API quick reference](DOC_REF.md)
@@ -250,6 +321,7 @@ git clone https://github.com/v-modal/vmodal_sdk_android.git
 cd vmodal_sdk_android
 ./gradlew --no-daemon help
 bash install.sh check
+bash test.sh ci
 bash test.sh all
 ```
 
@@ -260,7 +332,10 @@ cd examples/02_search
 ./gradlew --no-daemon :app:assembleDebug
 ```
 
-No emulator or API credential is required for the offline SDK gate. Maintainers can follow the [Maven Central release guide](docs/maven_release.md).
+`bash test.sh ci` reproduces the read-only pull-request gates with an isolated,
+checksummed Maven artifact, a clean standalone consumer, and both demo builds.
+No emulator or API credential is required. Maintainers can follow the
+[Maven Central release guide](docs/maven_release.md).
 
 ---
 

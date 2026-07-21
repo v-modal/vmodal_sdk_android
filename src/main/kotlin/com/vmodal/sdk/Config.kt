@@ -35,6 +35,8 @@ data class SdkConfig(
     val maxRetries: Int = 1,
     val apiKeyProvider: ApiKeyProvider? = null,
 ) {
+    private var diagnosticConfig: SdkDiagnostics = SdkDiagnostics.disabled()
+
     init {
         if (timeoutMillis <= 0) throw ValidationFailed("timeout_millis must be positive")
         if (maxRetries < 0) throw ValidationFailed("max_retries must not be negative")
@@ -57,6 +59,17 @@ data class SdkConfig(
     val normalizedToken: String = token.trim()
     /** Validated safe-read retry count. */
     val normalizedMaxRetries: Int = maxRetries
+    /** Sanitized network diagnostics configuration; disabled by default. */
+    val diagnostics: SdkDiagnostics get() = diagnosticConfig
+
+    /**
+     * Returns an otherwise identical configuration with explicitly selected diagnostics.
+     *
+     * Apply this after the final generated [copy] call. Diagnostics are intentionally not part
+     * of the frozen data-class constructor, so [copy] only copies the original configuration
+     * fields.
+     */
+    fun withDiagnostics(value: SdkDiagnostics): SdkConfig = copy().also { it.diagnosticConfig = value }
 
     internal fun currentApiKey(): String {
         val key = apiKeyProvider?.current() ?: normalizedToken
@@ -74,6 +87,7 @@ data class SdkConfig(
         append(", mode=").append(normalizedMode)
         append(", maxRetries=").append(maxRetries)
         append(", apiKeyProviderConfigured=").append(apiKeyProvider != null)
+        append(", diagnostics=").append(diagnostics)
         append(')')
     }
 

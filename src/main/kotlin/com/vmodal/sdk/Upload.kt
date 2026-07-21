@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -161,6 +162,7 @@ class OkHttpSignedUploadTransport(
         .writeTimeout(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
         .build(),
 ) : SignedUploadTransport {
+    private var diagnostics: SdkDiagnostics = SdkDiagnostics.disabled()
     private val client = client.newBuilder()
         .followRedirects(false)
         .followSslRedirects(false)
@@ -179,9 +181,41 @@ class OkHttpSignedUploadTransport(
         onProgress: (UploadProgress) -> Unit,
         onSuccess: (SignedUploadResult) -> Unit,
         onFailure: (Exception) -> Unit,
+    ): UploadHandle = enqueueDiagnostic(
+        source,
+        url,
+        method,
+        offset,
+        length,
+        headers,
+        timeoutMillis,
+        handle,
+        onProgress,
+        onSuccess,
+        onFailure,
+        1,
+    )
+
+    internal fun withDiagnostics(value: SdkDiagnostics): OkHttpSignedUploadTransport = apply {
+        diagnostics = value
+    }
+
+    internal fun enqueueDiagnostic(
+        source: UploadSource,
+        url: String,
+        method: String,
+        offset: Long,
+        length: Long,
+        headers: Map<String, String>,
+        timeoutMillis: Long?,
+        handle: UploadHandle,
+        onProgress: (UploadProgress) -> Unit,
+        onSuccess: (SignedUploadResult) -> Unit,
+        onFailure: (Exception) -> Unit,
+        attempt: Int,
     ): UploadHandle {
         if (url.isBlank()) throw ValidationFailed("signed upload URL is empty")
-        validatedHttpUrl(url)
+        val targetUrl = validatedHttpUrl(url)
         val body = StreamRequestBody(source, offset, length, onProgress)
         val builder = Request.Builder().url(url).method(method.uppercase(), body)
         // A pre-signed URL is already the authorization. Forwarding the SDK bearer/user headers
@@ -196,16 +230,50 @@ class OkHttpSignedUploadTransport(
             .writeTimeout(timeoutMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
             .build()
         val call = net.newCall(builder.build())
+        val done = AtomicBoolean(false)
+        val metadata = if (diagnostics.enabled) diagnosticUploadMetadata(source, offset, length) else null
+        val correlationId = diagnostics.strCorrelationId()
         handle.add(call)
-        call.enqueue(object : Callback {
+        val item = metadata?.let {
+            diagnostics.startAttempt(
+                correlationId,
+                DiagnosticTransportKind.SIGNED_UPLOAD,
+                method,
+                attempt,
+                strDiagnosticOrigin(targetUrl),
+                it,
+            )
+        }
+
+        fun fail(call: Call, error: Exception, diagnosticError: Throwable? = null) {
+            handle.remove(call)
+            if (done.compareAndSet(false, true)) {
+                val reason = if (call.isCanceled() || handle.isCanceled) {
+                    CancellationException("signed upload cancelled")
+                } else {
+                    diagnosticError ?: error
+                }
+                diagnostics.failure(item, reason)
+                onFailure(error)
+            }
+        }
+
+        val callback = object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                handle.remove(call)
-                onFailure(SignedUploadFailure(e, body.sentBytes, body.localMd5))
+                val error = SignedUploadFailure(e, body.sentBytes, body.localMd5)
+                fail(call, error, e)
             }
 
             override fun onResponse(call: Call, response: Response) {
-                handle.remove(call)
                 response.use {
+                    if (call.isCanceled() || handle.isCanceled) {
+                        fail(
+                            call,
+                            SignedUploadFailure(IOException("signed upload cancelled"), body.sentBytes, body.localMd5),
+                            CancellationException("signed upload cancelled"),
+                        )
+                        return
+                    }
                     if (!response.isSuccessful) {
                         val err = try {
                             val errBody = response.body
@@ -216,19 +284,53 @@ class OkHttpSignedUploadTransport(
                         } catch (exc: Exception) {
                             exc
                         }
-                        onFailure(err)
+                        fail(call, err)
                         return
                     }
                     val etag = response.header("ETag").orEmpty().trim().trim('"')
-                    onSuccess(SignedUploadResult(response.code, etag, body.localMd5))
+                    if (done.compareAndSet(false, true)) {
+                        handle.remove(call)
+                        if (call.isCanceled() || handle.isCanceled) {
+                            diagnostics.failure(item, CancellationException("signed upload cancelled"))
+                            onFailure(SignedUploadFailure(
+                                IOException("signed upload cancelled"), body.sentBytes, body.localMd5
+                            ))
+                        } else {
+                            diagnostics.response(
+                                item,
+                                response.code,
+                                response.header("Content-Type").orEmpty(),
+                                response.body?.contentLength() ?: -1,
+                            )
+                            onSuccess(SignedUploadResult(response.code, etag, body.localMd5))
+                        }
+                    }
                 }
             }
-        })
+        }
+        try {
+            call.enqueue(callback)
+        } catch (error: RuntimeException) {
+            handle.remove(call)
+            if (done.compareAndSet(false, true)) diagnostics.failure(item, error)
+            throw error
+        }
         return handle
     }
 
     private companion object {
-        val AUTH_HEADERS = setOf("authorization", "x-user-id", "x-tenant-id", "x-user-email")
+        val AUTH_HEADERS = setOf(
+            "authorization",
+            "proxy-authorization",
+            "cookie",
+            "x-user-id",
+            "x-tenant-id",
+            "x-user-email",
+            "x-api-key",
+            "api-key",
+            "x-auth-token",
+            "x-access-token",
+        )
     }
 }
 

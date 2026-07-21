@@ -1,0 +1,1072 @@
+public final class com/vmodal/sdk/AdaptiveUploadPolicy {
+	public static final field INSTANCE Lcom/vmodal/sdk/AdaptiveUploadPolicy;
+	public final fun select (JLcom/vmodal/sdk/UploadConditions;)Lcom/vmodal/sdk/AdaptiveUploadPreset;
+}
+
+public final class com/vmodal/sdk/AdaptiveUploadPreset {
+	public fun <init> (Ljava/lang/String;JIIJ)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()J
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun component5 ()J
+	public final fun copy (Ljava/lang/String;JIIJ)Lcom/vmodal/sdk/AdaptiveUploadPreset;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/AdaptiveUploadPreset;Ljava/lang/String;JIIJILjava/lang/Object;)Lcom/vmodal/sdk/AdaptiveUploadPreset;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMaxConcurrency ()I
+	public final fun getMaxPartAttempts ()I
+	public final fun getName ()Ljava/lang/String;
+	public final fun getPartSizeBytes ()J
+	public final fun getPartTimeoutSeconds ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/AdminResource {
+	public fun <init> (Lcom/vmodal/sdk/VmodalHttp;)V
+	public final fun cacheStats ()Lcom/vmodal/sdk/CacheStats;
+	public final fun usage (Ljava/lang/String;)Lcom/vmodal/sdk/UsageUserDetail;
+	public static synthetic fun usage$default (Lcom/vmodal/sdk/AdminResource;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/UsageUserDetail;
+	public final fun userStats ()Lcom/vmodal/sdk/AdminUserStatsResponse;
+}
+
+public final class com/vmodal/sdk/AdminUserStatItem : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+}
+
+public final class com/vmodal/sdk/AdminUserStatsResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getData ()Ljava/util/List;
+	public final fun getTotal ()I
+}
+
+public final class com/vmodal/sdk/ApiError : com/vmodal/sdk/SdkError {
+	public fun <init> (Ljava/lang/String;ILjava/lang/Object;Ljava/lang/Object;)V
+	public synthetic fun <init> (Ljava/lang/String;ILjava/lang/Object;Ljava/lang/Object;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public abstract interface class com/vmodal/sdk/ApiKeyProvider {
+	public abstract fun current ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/AuthError : com/vmodal/sdk/SdkError {
+	public fun <init> (Ljava/lang/String;ILjava/lang/Object;Ljava/lang/Object;)V
+	public synthetic fun <init> (Ljava/lang/String;ILjava/lang/Object;Ljava/lang/Object;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class com/vmodal/sdk/AuthResource {
+	public fun <init> (Lcom/vmodal/sdk/VmodalHttp;)V
+	public final fun authCheck (Ljava/lang/String;)Z
+	public static synthetic fun authCheck$default (Lcom/vmodal/sdk/AuthResource;Ljava/lang/String;ILjava/lang/Object;)Z
+	public final fun health ()Lcom/vmodal/sdk/HealthResponse;
+	public final fun me ()Lcom/vmodal/sdk/UserProfile;
+}
+
+public final class com/vmodal/sdk/CacheStats : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getApikeyCacheSize ()I
+	public final fun getConfig ()Ljava/util/Map;
+	public final fun getRateLimiterBuckets ()I
+}
+
+public final class com/vmodal/sdk/Client {
+	public static final field Companion Lcom/vmodal/sdk/Client$Companion;
+	public fun <init> (Lcom/vmodal/sdk/SdkConfig;Lcom/vmodal/sdk/VmodalTransport;Lcom/vmodal/sdk/SignedUploadTransport;)V
+	public synthetic fun <init> (Lcom/vmodal/sdk/SdkConfig;Lcom/vmodal/sdk/VmodalTransport;Lcom/vmodal/sdk/SignedUploadTransport;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILcom/vmodal/sdk/VmodalTransport;Lcom/vmodal/sdk/SignedUploadTransport;Lcom/vmodal/sdk/ApiKeyProvider;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILcom/vmodal/sdk/VmodalTransport;Lcom/vmodal/sdk/SignedUploadTransport;Lcom/vmodal/sdk/ApiKeyProvider;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun authCheck (Ljava/lang/String;)Z
+	public static synthetic fun authCheck$default (Lcom/vmodal/sdk/Client;Ljava/lang/String;ILjava/lang/Object;)Z
+	public final fun getAdmin ()Lcom/vmodal/sdk/AdminResource;
+	public final fun getAuth ()Lcom/vmodal/sdk/AuthResource;
+	public final fun getCfg ()Lcom/vmodal/sdk/SdkConfig;
+	public final fun getCollections ()Lcom/vmodal/sdk/CollectionsResource;
+	public final fun getGdrive ()Lcom/vmodal/sdk/GDriveResource;
+	public final fun getHttp ()Lcom/vmodal/sdk/VmodalHttp;
+	public final fun getImages ()Lcom/vmodal/sdk/ImagesResource;
+	public final fun getIndexes ()Lcom/vmodal/sdk/IndexesResource;
+	public final fun getR2 ()Lcom/vmodal/sdk/R2Resource;
+	public final fun getSearches ()Lcom/vmodal/sdk/SearchesResource;
+	public final fun getSql ()Lcom/vmodal/sdk/SqlResource;
+	public final fun health ()Lcom/vmodal/sdk/HealthResponse;
+}
+
+public final class com/vmodal/sdk/Client$Companion {
+	public final fun fromEnv (Ljava/util/Map;Lcom/vmodal/sdk/VmodalTransport;Lcom/vmodal/sdk/SignedUploadTransport;Z)Lcom/vmodal/sdk/Client;
+	public static synthetic fun fromEnv$default (Lcom/vmodal/sdk/Client$Companion;Ljava/util/Map;Lcom/vmodal/sdk/VmodalTransport;Lcom/vmodal/sdk/SignedUploadTransport;ZILjava/lang/Object;)Lcom/vmodal/sdk/Client;
+	public final fun unsafeDirect (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILcom/vmodal/sdk/VmodalTransport;Lcom/vmodal/sdk/SignedUploadTransport;)Lcom/vmodal/sdk/Client;
+	public static synthetic fun unsafeDirect$default (Lcom/vmodal/sdk/Client$Companion;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILcom/vmodal/sdk/VmodalTransport;Lcom/vmodal/sdk/SignedUploadTransport;ILjava/lang/Object;)Lcom/vmodal/sdk/Client;
+}
+
+public final class com/vmodal/sdk/ClientKt {
+	public static final field VMODAL_SDK_VERSION Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/CollectionAddAssetsRequest {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/vmodal/sdk/CollectionAddAssetsRequest;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/CollectionAddAssetsRequest;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/CollectionAddAssetsRequest;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAssetIds ()Ljava/util/List;
+	public final fun getCollectionId ()Ljava/lang/String;
+	public final fun getGroupName ()Ljava/lang/String;
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getStreamName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun toMap ()Ljava/util/Map;
+	public fun toString ()Ljava/lang/String;
+	public final fun validate ()V
+}
+
+public final class com/vmodal/sdk/CollectionAddAssetsResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+}
+
+public final class com/vmodal/sdk/CollectionAsset : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+}
+
+public final class com/vmodal/sdk/CollectionDescriptionUpdateResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+}
+
+public final class com/vmodal/sdk/CollectionUploadsKt {
+	public static final fun videoUpload (Lcom/vmodal/sdk/CollectionsResource;Lcom/vmodal/sdk/UploadSource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILcom/vmodal/sdk/VideoUploadOptions;Lkotlin/jvm/functions/Function1;)Lcom/vmodal/sdk/VideoUploadResponse;
+	public static synthetic fun videoUpload$default (Lcom/vmodal/sdk/CollectionsResource;Lcom/vmodal/sdk/UploadSource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILcom/vmodal/sdk/VideoUploadOptions;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lcom/vmodal/sdk/VideoUploadResponse;
+	public static final fun videoUploadAsync (Lcom/vmodal/sdk/CollectionsResource;Lcom/vmodal/sdk/UploadSource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILcom/vmodal/sdk/VideoUploadOptions;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Lcom/vmodal/sdk/UploadHandle;
+	public static synthetic fun videoUploadAsync$default (Lcom/vmodal/sdk/CollectionsResource;Lcom/vmodal/sdk/UploadSource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILcom/vmodal/sdk/VideoUploadOptions;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lcom/vmodal/sdk/UploadHandle;
+	public static final fun videoUploadBulk (Lcom/vmodal/sdk/CollectionsResource;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILcom/vmodal/sdk/VideoUploadOptions;)Lcom/vmodal/sdk/VideoUploadBulkResponse;
+	public static synthetic fun videoUploadBulk$default (Lcom/vmodal/sdk/CollectionsResource;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILcom/vmodal/sdk/VideoUploadOptions;ILjava/lang/Object;)Lcom/vmodal/sdk/VideoUploadBulkResponse;
+	public static final fun videoUploadBulkAsync (Lcom/vmodal/sdk/CollectionsResource;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILcom/vmodal/sdk/VideoUploadOptions;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Lcom/vmodal/sdk/UploadHandle;
+	public static synthetic fun videoUploadBulkAsync$default (Lcom/vmodal/sdk/CollectionsResource;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILcom/vmodal/sdk/VideoUploadOptions;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lcom/vmodal/sdk/UploadHandle;
+}
+
+public final class com/vmodal/sdk/CollectionsResource {
+	public fun <init> (Lcom/vmodal/sdk/VmodalHttp;Lcom/vmodal/sdk/SignedUploadTransport;)V
+	public final fun addAssets (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/vmodal/sdk/CollectionAddAssetsResponse;
+	public static synthetic fun addAssets$default (Lcom/vmodal/sdk/CollectionsResource;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/CollectionAddAssetsResponse;
+	public final fun autoIndexGet ()Ljava/lang/Void;
+	public final fun autoIndexSet ()Ljava/lang/Void;
+	public final fun create ()Ljava/lang/Void;
+	public final fun delete (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZ)Lcom/vmodal/sdk/DeleteCollectionResponse;
+	public static synthetic fun delete$default (Lcom/vmodal/sdk/CollectionsResource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZILjava/lang/Object;)Lcom/vmodal/sdk/DeleteCollectionResponse;
+	public final fun edit ()Ljava/lang/Void;
+	public final fun listGroups (Ljava/lang/String;)Lcom/vmodal/sdk/GroupsResponse;
+	public static synthetic fun listGroups$default (Lcom/vmodal/sdk/CollectionsResource;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/GroupsResponse;
+	public final fun updateDescription (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lcom/vmodal/sdk/CollectionDescriptionUpdateResponse;
+	public static synthetic fun updateDescription$default (Lcom/vmodal/sdk/CollectionsResource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/vmodal/sdk/CollectionDescriptionUpdateResponse;
+	public final fun uploadFile (Lcom/vmodal/sdk/VmodalFilePart;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lcom/vmodal/sdk/UploadResponse;
+	public final fun uploadFile (Ljava/io/File;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lcom/vmodal/sdk/UploadResponse;
+	public static synthetic fun uploadFile$default (Lcom/vmodal/sdk/CollectionsResource;Lcom/vmodal/sdk/VmodalFilePart;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/vmodal/sdk/UploadResponse;
+	public static synthetic fun uploadFile$default (Lcom/vmodal/sdk/CollectionsResource;Ljava/io/File;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/vmodal/sdk/UploadResponse;
+	public final fun uploadFolder ()Ljava/lang/Void;
+	public final fun uploadMetadataJsonl (Lcom/vmodal/sdk/VmodalFilePart;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)Lcom/vmodal/sdk/MetadataParquetUploadResponse;
+	public static synthetic fun uploadMetadataJsonl$default (Lcom/vmodal/sdk/CollectionsResource;Lcom/vmodal/sdk/VmodalFilePart;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)Lcom/vmodal/sdk/MetadataParquetUploadResponse;
+}
+
+public final class com/vmodal/sdk/ConfigKt {
+	public static final field DEV_GATEWAY_URL Ljava/lang/String;
+	public static final field PUBLIC_GATEWAY_URL Ljava/lang/String;
+	public static final field PUBLIC_GATEWAY_URL_HASH Ljava/lang/String;
+	public static final fun strGatewayBaseUrl (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+	public static synthetic fun strGatewayBaseUrl$default (Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ljava/lang/String;
+	public static final fun strUsersBaseUrl (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/DeleteCollectionRequest {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZ)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Z
+	public final fun component5 ()Z
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZ)Lcom/vmodal/sdk/DeleteCollectionRequest;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/DeleteCollectionRequest;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZILjava/lang/Object;)Lcom/vmodal/sdk/DeleteCollectionRequest;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getConfirm ()Z
+	public final fun getDryRun ()Z
+	public final fun getGroupName ()Ljava/lang/String;
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getScope ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun toMap ()Ljava/util/Map;
+	public fun toString ()Ljava/lang/String;
+	public final fun validate ()V
+}
+
+public final class com/vmodal/sdk/DeleteCollectionResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+}
+
+public final class com/vmodal/sdk/ExternalUploadSignedUrlResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getExpiresIn ()I
+	public final fun getKey ()Ljava/lang/String;
+	public final fun getMethod ()Ljava/lang/String;
+	public final fun getUrl ()Ljava/lang/String;
+	public final fun getUserId ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/FeatureDisabled : com/vmodal/sdk/SdkError {
+	public fun <init> (Ljava/lang/String;)V
+}
+
+public final class com/vmodal/sdk/FileUploadSessionStore : com/vmodal/sdk/UploadSessionStore {
+	public fun <init> (Ljava/io/File;)V
+	public fun load (Ljava/lang/String;)Ljava/util/Map;
+	public fun remove (Ljava/lang/String;)V
+	public fun save (Ljava/lang/String;Ljava/util/Map;)V
+}
+
+public final class com/vmodal/sdk/FolderUploadItem : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+}
+
+public final class com/vmodal/sdk/FolderUploadResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+}
+
+public final class com/vmodal/sdk/FullPathImageResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getFound ()Z
+	public final fun getFullpath ()Ljava/lang/String;
+	public final fun getImgBase64 ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/GDriveResource {
+	public fun <init> ()V
+	public final fun privateAuthUrl ()Ljava/lang/Void;
+	public final fun privateDownload ()Ljava/lang/Void;
+}
+
+public final class com/vmodal/sdk/GroupItem : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getGroupName ()Ljava/lang/String;
+	public final fun getLancedbVersions ()Ljava/util/List;
+	public final fun getLastUpdated ()Ljava/lang/String;
+	public final fun getLatestLancedbVersion ()Ljava/lang/Integer;
+	public final fun getModalityTypes ()Ljava/util/List;
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getUserId ()Ljava/lang/String;
+	public final fun getVideoGroup ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/GroupsResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun findGroup (Ljava/lang/String;Ljava/lang/String;)Lcom/vmodal/sdk/GroupItem;
+	public static synthetic fun findGroup$default (Lcom/vmodal/sdk/GroupsResponse;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/GroupItem;
+	public final fun getData ()Ljava/util/List;
+	public final fun getExecutionTimeMs ()D
+	public final fun getTotal ()I
+}
+
+public final class com/vmodal/sdk/HealthResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getDependencies ()Ljava/lang/Object;
+	public final fun getPythonVersion ()Ljava/lang/String;
+	public final fun getStatus ()Ljava/lang/String;
+	public final fun getTimestamp ()Ljava/lang/String;
+	public final fun getVersion ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/HttpUrlConnectionTransport : com/vmodal/sdk/VmodalTransport {
+	public fun <init> (Lcom/vmodal/sdk/SdkConfig;)V
+	public fun <init> (Lcom/vmodal/sdk/SdkConfig;JJJ)V
+	public fun execute (Lcom/vmodal/sdk/VmodalRequest;)Lcom/vmodal/sdk/VmodalResponse;
+}
+
+public final class com/vmodal/sdk/ImageBulkResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getRecords ()Ljava/util/List;
+}
+
+public final class com/vmodal/sdk/ImageGetBulkResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getRecords ()Ljava/util/List;
+}
+
+public final class com/vmodal/sdk/ImageRecord {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/vmodal/sdk/ImageRecord;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/ImageRecord;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/ImageRecord;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFilename ()Ljava/lang/String;
+	public final fun getFrameId ()Ljava/lang/String;
+	public final fun getGroupName ()Ljava/lang/String;
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getStreamName ()Ljava/lang/String;
+	public final fun getUserid ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun toMap ()Ljava/util/Map;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/ImageResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getFound ()Z
+	public final fun getImgBase64 ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/ImageUrlBulkResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getRecords ()Ljava/util/List;
+}
+
+public final class com/vmodal/sdk/ImageUrlRecord {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/vmodal/sdk/ImageUrlRecord;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/ImageUrlRecord;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/ImageUrlRecord;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFilename ()Ljava/lang/String;
+	public final fun getGroupName ()Ljava/lang/String;
+	public final fun getModality ()Ljava/lang/String;
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getStreamName ()Ljava/lang/String;
+	public final fun getTsUnix13digits ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun toMap ()Ljava/util/Map;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/ImageUrlResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getError ()Ljava/lang/String;
+	public final fun getExpireSec ()I
+	public final fun getFound ()Z
+	public final fun getFullPath ()Ljava/lang/String;
+	public final fun getUrlPreSigned ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/ImagesResource {
+	public fun <init> (Lcom/vmodal/sdk/VmodalHttp;)V
+	public final fun getImageBulkFromUrls (Ljava/util/List;Ljava/lang/String;)Lcom/vmodal/sdk/ImageGetBulkResponse;
+	public static synthetic fun getImageBulkFromUrls$default (Lcom/vmodal/sdk/ImagesResource;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/ImageGetBulkResponse;
+	public final fun getImageFromUrl (Ljava/lang/String;Ljava/lang/String;)[B
+	public static synthetic fun getImageFromUrl$default (Lcom/vmodal/sdk/ImagesResource;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)[B
+	public final fun getUrl (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;)Lcom/vmodal/sdk/ImageUrlResponse;
+	public static synthetic fun getUrl$default (Lcom/vmodal/sdk/ImagesResource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/ImageUrlResponse;
+	public final fun getUrlBulk (Ljava/util/List;Ljava/lang/String;)Lcom/vmodal/sdk/ImageUrlBulkResponse;
+	public static synthetic fun getUrlBulk$default (Lcom/vmodal/sdk/ImagesResource;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/ImageUrlBulkResponse;
+}
+
+public final class com/vmodal/sdk/IndexationDeleteRequest {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZ)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Z
+	public final fun component6 ()Z
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZ)Lcom/vmodal/sdk/IndexationDeleteRequest;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/IndexationDeleteRequest;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZILjava/lang/Object;)Lcom/vmodal/sdk/IndexationDeleteRequest;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getConfirm ()Z
+	public final fun getDryRun ()Z
+	public final fun getGroupName ()Ljava/lang/String;
+	public final fun getModality ()Ljava/lang/String;
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getVersion ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun toMap ()Ljava/util/Map;
+	public fun toString ()Ljava/lang/String;
+	public final fun validate ()V
+}
+
+public final class com/vmodal/sdk/IndexationDeleteResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getStatus ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/IndexationJobItem : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+}
+
+public final class com/vmodal/sdk/IndexationJobsListResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getData ()Ljava/util/List;
+	public final fun getTotal ()I
+}
+
+public final class com/vmodal/sdk/IndexationStatusResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getJobId ()Ljava/lang/String;
+	public final fun getStatus ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/IndexationSubmitRequest {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZ)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()Ljava/lang/String;
+	public final fun component11 ()Ljava/lang/String;
+	public final fun component12 ()Z
+	public final fun component13 ()Z
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()Z
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZ)Lcom/vmodal/sdk/IndexationSubmitRequest;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/IndexationSubmitRequest;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZILjava/lang/Object;)Lcom/vmodal/sdk/IndexationSubmitRequest;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCreateIndex ()Z
+	public final fun getDryRun ()Z
+	public final fun getEmbeddingModel ()Ljava/lang/String;
+	public final fun getEndDate ()Ljava/lang/String;
+	public final fun getGroupName ()Ljava/lang/String;
+	public final fun getIndexType ()Ljava/lang/String;
+	public final fun getInsertMode ()Ljava/lang/String;
+	public final fun getModality ()Ljava/lang/String;
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getReProcess ()Z
+	public final fun getStartDate ()Ljava/lang/String;
+	public final fun getStreamName ()Ljava/lang/String;
+	public final fun getVersion ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun toMap ()Ljava/util/Map;
+	public fun toString ()Ljava/lang/String;
+	public final fun validate ()V
+}
+
+public final class com/vmodal/sdk/IndexationSubmitResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getJobId ()Ljava/lang/String;
+	public final fun getStatus ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/IndexesResource {
+	public fun <init> (Lcom/vmodal/sdk/VmodalHttp;)V
+	public final fun createIndex (Lcom/vmodal/sdk/IndexationSubmitRequest;)Lcom/vmodal/sdk/IndexationSubmitResponse;
+	public final fun createIndex (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZ)Lcom/vmodal/sdk/IndexationSubmitResponse;
+	public static synthetic fun createIndex$default (Lcom/vmodal/sdk/IndexesResource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZILjava/lang/Object;)Lcom/vmodal/sdk/IndexationSubmitResponse;
+	public final fun deleteIndex (Lcom/vmodal/sdk/IndexationDeleteRequest;)Lcom/vmodal/sdk/IndexationDeleteResponse;
+	public final fun deleteIndex (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZ)Lcom/vmodal/sdk/IndexationDeleteResponse;
+	public static synthetic fun deleteIndex$default (Lcom/vmodal/sdk/IndexesResource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZILjava/lang/Object;)Lcom/vmodal/sdk/IndexationDeleteResponse;
+	public final fun embeddingModels ()Ljava/lang/Void;
+	public final fun indexStatus (Ljava/lang/String;)Lcom/vmodal/sdk/IndexationStatusResponse;
+	public static synthetic fun indexStatus$default (Lcom/vmodal/sdk/IndexesResource;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/IndexationStatusResponse;
+	public final fun jobsList (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)Lcom/vmodal/sdk/IndexationJobsListResponse;
+	public static synthetic fun jobsList$default (Lcom/vmodal/sdk/IndexesResource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lcom/vmodal/sdk/IndexationJobsListResponse;
+}
+
+public class com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getRaw ()Ljava/util/Map;
+}
+
+public final class com/vmodal/sdk/MalformedResponse : com/vmodal/sdk/SdkError {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class com/vmodal/sdk/MemoryUploadSessionStore : com/vmodal/sdk/UploadSessionStore {
+	public fun <init> ()V
+	public fun load (Ljava/lang/String;)Ljava/util/Map;
+	public fun remove (Ljava/lang/String;)V
+	public fun save (Ljava/lang/String;Ljava/util/Map;)V
+}
+
+public final class com/vmodal/sdk/MetadataParquetUploadResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+}
+
+public final class com/vmodal/sdk/MultipartCompleteResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getAlreadyCompleted ()Z
+	public final fun getEtag ()Ljava/lang/String;
+	public final fun getKey ()Ljava/lang/String;
+	public final fun getSizeBytes ()J
+	public final fun getStatus ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/MultipartCreateResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getKey ()Ljava/lang/String;
+	public final fun getPartCount ()I
+	public final fun getPartSizeBytes ()J
+	public final fun getRequestId ()Ljava/lang/String;
+	public final fun getSizeBytes ()J
+	public final fun getStatus ()Ljava/lang/String;
+	public final fun getUploadId ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/MultipartPart : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getEtag ()Ljava/lang/String;
+	public final fun getPartNumber ()I
+	public final fun getSizeBytes ()J
+}
+
+public final class com/vmodal/sdk/MultipartSignResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getExpiresIn ()I
+	public final fun getParts ()Ljava/util/List;
+}
+
+public final class com/vmodal/sdk/MultipartSignedPart : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getHeaders ()Ljava/util/Map;
+	public final fun getMethod ()Ljava/lang/String;
+	public final fun getPartNumber ()I
+	public final fun getUrl ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/MultipartStatusResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getEtag ()Ljava/lang/String;
+	public final fun getParts ()Ljava/util/List;
+	public final fun getSizeBytes ()J
+	public final fun getStatus ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/MutableApiKeyProvider : com/vmodal/sdk/ApiKeyProvider, java/lang/AutoCloseable {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun clear ()V
+	public fun close ()V
+	public fun current ()Ljava/lang/String;
+	public final fun rotate (Ljava/lang/String;)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/OkHttpSignedUploadTransport : com/vmodal/sdk/SignedUploadTransport {
+	public fun <init> ()V
+	public fun <init> (JLokhttp3/OkHttpClient;)V
+	public synthetic fun <init> (JLokhttp3/OkHttpClient;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun enqueue (Lcom/vmodal/sdk/UploadSource;Ljava/lang/String;Ljava/lang/String;JJLjava/util/Map;Ljava/lang/Long;Lcom/vmodal/sdk/UploadHandle;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Lcom/vmodal/sdk/UploadHandle;
+}
+
+public final class com/vmodal/sdk/PresignedFolderItem : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getFilename ()Ljava/lang/String;
+	public final fun getKey ()Ljava/lang/String;
+	public final fun getMethod ()Ljava/lang/String;
+	public final fun getUrl ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/PresignedFolderResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getExpiresIn ()I
+	public final fun getFiles ()Ljava/util/List;
+	public final fun getUserId ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/PresignedUploadResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getExpiresIn ()I
+	public final fun getKey ()Ljava/lang/String;
+	public final fun getMethod ()Ljava/lang/String;
+	public final fun getUrl ()Ljava/lang/String;
+	public final fun getUserId ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/R2Resource {
+	public fun <init> (Lcom/vmodal/sdk/VmodalHttp;)V
+	public final fun presignUploadFile (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)Lcom/vmodal/sdk/PresignedUploadResponse;
+	public static synthetic fun presignUploadFile$default (Lcom/vmodal/sdk/R2Resource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lcom/vmodal/sdk/PresignedUploadResponse;
+	public final fun presignUploadFolderVideo (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;I)Lcom/vmodal/sdk/PresignedFolderResponse;
+	public static synthetic fun presignUploadFolderVideo$default (Lcom/vmodal/sdk/R2Resource;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;IILjava/lang/Object;)Lcom/vmodal/sdk/PresignedFolderResponse;
+}
+
+public final class com/vmodal/sdk/ResponseTooLarge : com/vmodal/sdk/SdkError {
+	public fun <init> (JJ)V
+	public final fun getLimitBytes ()J
+	public final fun getObservedBytes ()J
+}
+
+public final class com/vmodal/sdk/Routes {
+	public static final field INSTANCE Lcom/vmodal/sdk/Routes;
+	public static final field PREFIX Ljava/lang/String;
+	public static final field USERS_API_PREFIX Ljava/lang/String;
+	public static final field externalUploadDone Ljava/lang/String;
+	public static final field externalUploadGetSignedUrl Ljava/lang/String;
+	public static final field externalUploadMultipartAbort Ljava/lang/String;
+	public static final field externalUploadMultipartComplete Ljava/lang/String;
+	public static final field externalUploadMultipartCreate Ljava/lang/String;
+	public static final field externalUploadMultipartSignParts Ljava/lang/String;
+	public static final field externalUploadMultipartStatus Ljava/lang/String;
+	public final fun full (Ljava/lang/String;)Ljava/lang/String;
+	public final fun getActiveEndpoints ()Ljava/util/Map;
+	public final fun getDisabledEndpoints ()Ljava/util/Map;
+	public final fun usersFull (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/Routes$Endpoints {
+	public static final field INSTANCE Lcom/vmodal/sdk/Routes$Endpoints;
+	public static final field adminUserStats Ljava/lang/String;
+	public static final field collectionAddAssets Ljava/lang/String;
+	public static final field collectionDelete Ljava/lang/String;
+	public static final field collectionDescriptionUpdate Ljava/lang/String;
+	public static final field groups Ljava/lang/String;
+	public static final field health Ljava/lang/String;
+	public static final field imageGetImage Ljava/lang/String;
+	public static final field imageGetImageBulk Ljava/lang/String;
+	public static final field imageGetUrl Ljava/lang/String;
+	public static final field imageGetUrlBulk Ljava/lang/String;
+	public static final field indexationDelete Ljava/lang/String;
+	public static final field indexationJobs Ljava/lang/String;
+	public static final field indexationStatus Ljava/lang/String;
+	public static final field indexationSubmit Ljava/lang/String;
+	public static final field searchClient Ljava/lang/String;
+	public static final field upload Ljava/lang/String;
+	public static final field uploadFolder Ljava/lang/String;
+	public static final field uploadGoogleDriveFolder Ljava/lang/String;
+	public static final field uploadMetadataItemParquetInternal Ljava/lang/String;
+	public static final field uploadMetadataJsonl Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/Routes$UsersEndpoints {
+	public static final field INSTANCE Lcom/vmodal/sdk/Routes$UsersEndpoints;
+	public static final field adminCacheStats Ljava/lang/String;
+	public static final field adminUsage Ljava/lang/String;
+	public static final field authMe Ljava/lang/String;
+	public static final field r2UploadFile Ljava/lang/String;
+	public static final field r2UploadFolderVideo Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/SdkConfig {
+	public static final field Companion Lcom/vmodal/sdk/SdkConfig$Companion;
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;ILcom/vmodal/sdk/ApiKeyProvider;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;ILcom/vmodal/sdk/ApiKeyProvider;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()I
+	public final fun component7 ()Ljava/lang/String;
+	public final fun component8 ()I
+	public final fun component9 ()Lcom/vmodal/sdk/ApiKeyProvider;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;ILcom/vmodal/sdk/ApiKeyProvider;)Lcom/vmodal/sdk/SdkConfig;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/SdkConfig;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;ILcom/vmodal/sdk/ApiKeyProvider;ILjava/lang/Object;)Lcom/vmodal/sdk/SdkConfig;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getApiKeyProvider ()Lcom/vmodal/sdk/ApiKeyProvider;
+	public final fun getBaseUrl ()Ljava/lang/String;
+	public final fun getEmail ()Ljava/lang/String;
+	public final fun getMaxRetries ()I
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getNormalizedBaseUrl ()Ljava/lang/String;
+	public final fun getNormalizedEmail ()Ljava/lang/String;
+	public final fun getNormalizedMaxRetries ()I
+	public final fun getNormalizedMode ()Ljava/lang/String;
+	public final fun getNormalizedTenantId ()Ljava/lang/String;
+	public final fun getNormalizedToken ()Ljava/lang/String;
+	public final fun getNormalizedUserId ()Ljava/lang/String;
+	public final fun getTenantId ()Ljava/lang/String;
+	public final fun getTimeoutMillis ()I
+	public final fun getToken ()Ljava/lang/String;
+	public final fun getUserId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/SdkConfig$Companion {
+	public final fun fromEnv (Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/Integer;)Lcom/vmodal/sdk/SdkConfig;
+	public static synthetic fun fromEnv$default (Lcom/vmodal/sdk/SdkConfig$Companion;Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/lang/String;Ljava/lang/Integer;ILjava/lang/Object;)Lcom/vmodal/sdk/SdkConfig;
+}
+
+public class com/vmodal/sdk/SdkError : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/String;ILjava/lang/Object;Ljava/lang/Object;)V
+	public synthetic fun <init> (Ljava/lang/String;ILjava/lang/Object;Ljava/lang/Object;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getBody ()Ljava/lang/Object;
+	public final fun getDetails ()Ljava/lang/Object;
+	public final fun getStatusCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/SearchRequest {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIDDLjava/lang/Integer;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIDDLjava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()Ljava/lang/String;
+	public final fun component11 ()I
+	public final fun component12 ()I
+	public final fun component13 ()D
+	public final fun component14 ()D
+	public final fun component15 ()Ljava/lang/Integer;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()Ljava/util/List;
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIDDLjava/lang/Integer;)Lcom/vmodal/sdk/SearchRequest;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/SearchRequest;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIDDLjava/lang/Integer;ILjava/lang/Object;)Lcom/vmodal/sdk/SearchRequest;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEndDate ()Ljava/lang/String;
+	public final fun getGroupName ()Ljava/lang/String;
+	public final fun getImageEmbScoreMin ()D
+	public final fun getImageQuery ()Ljava/lang/String;
+	public final fun getLimit ()I
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getOffset ()I
+	public final fun getQueryMetadata ()Ljava/util/Map;
+	public final fun getQueryText ()Ljava/lang/String;
+	public final fun getSearchCombineMode ()Ljava/lang/String;
+	public final fun getSearchSources ()Ljava/util/List;
+	public final fun getStartDate ()Ljava/lang/String;
+	public final fun getStreamName ()Ljava/lang/String;
+	public final fun getTextEmbScoreMin ()D
+	public final fun getVersionLancedb ()Ljava/lang/Integer;
+	public fun hashCode ()I
+	public final fun toMap ()Ljava/util/Map;
+	public fun toString ()Ljava/lang/String;
+	public final fun validate ()V
+}
+
+public final class com/vmodal/sdk/SearchResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getCntActual ()I
+	public final fun getCntTotal ()I
+	public final fun getData ()Ljava/util/List;
+	public final fun getExecutionTimeMs ()D
+}
+
+public final class com/vmodal/sdk/SearchResultItem : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+}
+
+public final class com/vmodal/sdk/SearchesResource {
+	public fun <init> (Lcom/vmodal/sdk/VmodalHttp;)V
+	public final fun searchVideo (Lcom/vmodal/sdk/SearchRequest;)Lcom/vmodal/sdk/SearchResponse;
+	public final fun searchVideo (Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIDDLjava/lang/Integer;)Lcom/vmodal/sdk/SearchResponse;
+	public static synthetic fun searchVideo$default (Lcom/vmodal/sdk/SearchesResource;Ljava/lang/String;Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIDDLjava/lang/Integer;ILjava/lang/Object;)Lcom/vmodal/sdk/SearchResponse;
+}
+
+public final class com/vmodal/sdk/SignedUploadResult {
+	public fun <init> (ILjava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (ILjava/lang/String;Ljava/lang/String;)Lcom/vmodal/sdk/SignedUploadResult;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/SignedUploadResult;ILjava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/SignedUploadResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEtag ()Ljava/lang/String;
+	public final fun getLocalMd5 ()Ljava/lang/String;
+	public final fun getStatusCode ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/vmodal/sdk/SignedUploadTransport {
+	public abstract fun enqueue (Lcom/vmodal/sdk/UploadSource;Ljava/lang/String;Ljava/lang/String;JJLjava/util/Map;Ljava/lang/Long;Lcom/vmodal/sdk/UploadHandle;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Lcom/vmodal/sdk/UploadHandle;
+}
+
+public final class com/vmodal/sdk/SignedUploadTransport$DefaultImpls {
+	public static synthetic fun enqueue$default (Lcom/vmodal/sdk/SignedUploadTransport;Lcom/vmodal/sdk/UploadSource;Ljava/lang/String;Ljava/lang/String;JJLjava/util/Map;Ljava/lang/Long;Lcom/vmodal/sdk/UploadHandle;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lcom/vmodal/sdk/UploadHandle;
+}
+
+public final class com/vmodal/sdk/SqlResource {
+	public fun <init> ()V
+	public final fun query ()Ljava/lang/Void;
+}
+
+public final class com/vmodal/sdk/TransportError : com/vmodal/sdk/SdkError {
+	public fun <init> (Ljava/io/IOException;)V
+}
+
+public final class com/vmodal/sdk/TransportKt {
+	public static final field BINARY_RESPONSE_LIMIT_BYTES J
+	public static final field ERROR_RESPONSE_LIMIT_BYTES J
+	public static final field JSON_RESPONSE_LIMIT_BYTES J
+	public static final fun filePart (Ljava/lang/String;Ljava/io/File;Ljava/lang/String;)Lcom/vmodal/sdk/VmodalFilePart;
+	public static synthetic fun filePart$default (Ljava/lang/String;Ljava/io/File;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/VmodalFilePart;
+	public static final fun guessContentType (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun streamPart (Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;Lkotlin/jvm/functions/Function0;)Lcom/vmodal/sdk/VmodalFilePart;
+	public static synthetic fun streamPart$default (Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;Lkotlin/jvm/functions/Function0;ILjava/lang/Object;)Lcom/vmodal/sdk/VmodalFilePart;
+}
+
+public final class com/vmodal/sdk/UploadConditions {
+	public fun <init> ()V
+	public fun <init> (Lcom/vmodal/sdk/UploadNetworkType;Lcom/vmodal/sdk/UploadNetworkSpeed;Lcom/vmodal/sdk/UploadDeviceMemory;)V
+	public synthetic fun <init> (Lcom/vmodal/sdk/UploadNetworkType;Lcom/vmodal/sdk/UploadNetworkSpeed;Lcom/vmodal/sdk/UploadDeviceMemory;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lcom/vmodal/sdk/UploadNetworkType;
+	public final fun component2 ()Lcom/vmodal/sdk/UploadNetworkSpeed;
+	public final fun component3 ()Lcom/vmodal/sdk/UploadDeviceMemory;
+	public final fun copy (Lcom/vmodal/sdk/UploadNetworkType;Lcom/vmodal/sdk/UploadNetworkSpeed;Lcom/vmodal/sdk/UploadDeviceMemory;)Lcom/vmodal/sdk/UploadConditions;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/UploadConditions;Lcom/vmodal/sdk/UploadNetworkType;Lcom/vmodal/sdk/UploadNetworkSpeed;Lcom/vmodal/sdk/UploadDeviceMemory;ILjava/lang/Object;)Lcom/vmodal/sdk/UploadConditions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDeviceMemory ()Lcom/vmodal/sdk/UploadDeviceMemory;
+	public final fun getNetworkSpeed ()Lcom/vmodal/sdk/UploadNetworkSpeed;
+	public final fun getNetworkType ()Lcom/vmodal/sdk/UploadNetworkType;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/UploadDeviceMemory : java/lang/Enum {
+	public static final field HIGH Lcom/vmodal/sdk/UploadDeviceMemory;
+	public static final field LOW Lcom/vmodal/sdk/UploadDeviceMemory;
+	public static final field STANDARD Lcom/vmodal/sdk/UploadDeviceMemory;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/vmodal/sdk/UploadDeviceMemory;
+	public static fun values ()[Lcom/vmodal/sdk/UploadDeviceMemory;
+}
+
+public final class com/vmodal/sdk/UploadHandle {
+	public final fun cancel ()V
+	public final fun isCanceled ()Z
+}
+
+public final class com/vmodal/sdk/UploadNetworkSpeed : java/lang/Enum {
+	public static final field FAST Lcom/vmodal/sdk/UploadNetworkSpeed;
+	public static final field SLOW Lcom/vmodal/sdk/UploadNetworkSpeed;
+	public static final field STANDARD Lcom/vmodal/sdk/UploadNetworkSpeed;
+	public static final field UNKNOWN Lcom/vmodal/sdk/UploadNetworkSpeed;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/vmodal/sdk/UploadNetworkSpeed;
+	public static fun values ()[Lcom/vmodal/sdk/UploadNetworkSpeed;
+}
+
+public final class com/vmodal/sdk/UploadNetworkType : java/lang/Enum {
+	public static final field CELLULAR Lcom/vmodal/sdk/UploadNetworkType;
+	public static final field UNKNOWN Lcom/vmodal/sdk/UploadNetworkType;
+	public static final field WIFI Lcom/vmodal/sdk/UploadNetworkType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lcom/vmodal/sdk/UploadNetworkType;
+	public static fun values ()[Lcom/vmodal/sdk/UploadNetworkType;
+}
+
+public final class com/vmodal/sdk/UploadProgress {
+	public fun <init> (JJ)V
+	public final fun component1 ()J
+	public final fun component2 ()J
+	public final fun copy (JJ)Lcom/vmodal/sdk/UploadProgress;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/UploadProgress;JJILjava/lang/Object;)Lcom/vmodal/sdk/UploadProgress;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPercent ()I
+	public final fun getTotalBytes ()J
+	public final fun getUploadedBytes ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/UploadResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+}
+
+public abstract interface class com/vmodal/sdk/UploadSessionStore {
+	public abstract fun load (Ljava/lang/String;)Ljava/util/Map;
+	public abstract fun remove (Ljava/lang/String;)V
+	public abstract fun save (Ljava/lang/String;Ljava/util/Map;)V
+}
+
+public final class com/vmodal/sdk/UploadSessionStores {
+	public static final field INSTANCE Lcom/vmodal/sdk/UploadSessionStores;
+	public final fun getMemory ()Lcom/vmodal/sdk/UploadSessionStore;
+}
+
+public final class com/vmodal/sdk/UploadSource {
+	public static final field Companion Lcom/vmodal/sdk/UploadSource$Companion;
+	public fun <init> (Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getContentLength ()J
+	public final fun getContentType ()Ljava/lang/String;
+	public final fun getFileName ()Ljava/lang/String;
+	public final fun getSourceId ()Ljava/lang/String;
+	public final fun getVersionTag ()Ljava/lang/String;
+	public final fun open (JJ)Ljava/io/InputStream;
+	public static synthetic fun open$default (Lcom/vmodal/sdk/UploadSource;JJILjava/lang/Object;)Ljava/io/InputStream;
+}
+
+public final class com/vmodal/sdk/UploadSource$Companion {
+	public final fun fromFile (Ljava/io/File;Ljava/lang/String;)Lcom/vmodal/sdk/UploadSource;
+	public static synthetic fun fromFile$default (Lcom/vmodal/sdk/UploadSource$Companion;Ljava/io/File;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/UploadSource;
+}
+
+public final class com/vmodal/sdk/UsageUserDetail : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getDate ()Ljava/lang/String;
+	public final fun getEndpoints ()Ljava/util/Map;
+	public final fun getTotal ()I
+	public final fun getUserId ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/UserProfile : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getEmail ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getPermissions ()Ljava/util/List;
+	public final fun getRoles ()Ljava/util/List;
+	public final fun getTenantId ()Ljava/lang/String;
+	public final fun getType ()Ljava/lang/String;
+	public final fun getUserId ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/ValidationFailed : com/vmodal/sdk/SdkError {
+	public fun <init> (Ljava/lang/String;ILjava/lang/Object;Ljava/lang/Object;)V
+	public synthetic fun <init> (Ljava/lang/String;ILjava/lang/Object;Ljava/lang/Object;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class com/vmodal/sdk/VideoUploadBulkResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getData ()Ljava/util/List;
+	public final fun getTotal ()I
+}
+
+public final class com/vmodal/sdk/VideoUploadOptions {
+	public fun <init> ()V
+	public fun <init> (ZJJIIJZLcom/vmodal/sdk/UploadSessionStore;Lcom/vmodal/sdk/UploadConditions;)V
+	public synthetic fun <init> (ZJJIIJZLcom/vmodal/sdk/UploadSessionStore;Lcom/vmodal/sdk/UploadConditions;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Z
+	public final fun component2 ()J
+	public final fun component3 ()J
+	public final fun component4 ()I
+	public final fun component5 ()I
+	public final fun component6 ()J
+	public final fun component7 ()Z
+	public final fun component8 ()Lcom/vmodal/sdk/UploadSessionStore;
+	public final fun component9 ()Lcom/vmodal/sdk/UploadConditions;
+	public final fun copy (ZJJIIJZLcom/vmodal/sdk/UploadSessionStore;Lcom/vmodal/sdk/UploadConditions;)Lcom/vmodal/sdk/VideoUploadOptions;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/VideoUploadOptions;ZJJIIJZLcom/vmodal/sdk/UploadSessionStore;Lcom/vmodal/sdk/UploadConditions;ILjava/lang/Object;)Lcom/vmodal/sdk/VideoUploadOptions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAdaptiveConditions ()Lcom/vmodal/sdk/UploadConditions;
+	public final fun getMaxConcurrency ()I
+	public final fun getMaxPartAttempts ()I
+	public final fun getMultipart ()Z
+	public final fun getMultipartThresholdBytes ()J
+	public final fun getPartSizeBytes ()J
+	public final fun getPartTimeoutSeconds ()J
+	public final fun getResume ()Z
+	public final fun getSessionStore ()Lcom/vmodal/sdk/UploadSessionStore;
+	public fun hashCode ()I
+	public final fun resolvedFor (J)Lcom/vmodal/sdk/VideoUploadOptions;
+	public fun toString ()Ljava/lang/String;
+	public final fun validate (J)V
+}
+
+public final class com/vmodal/sdk/VideoUploadResponse : com/vmodal/sdk/JsonBackedResponse {
+	public fun <init> (Ljava/util/Map;)V
+	public final fun getAttemptCount ()I
+	public final fun getDestPath ()Ljava/lang/String;
+	public final fun getEtag ()Ljava/lang/String;
+	public final fun getFileName ()Ljava/lang/String;
+	public final fun getKey ()Ljava/lang/String;
+	public final fun getMethod ()Ljava/lang/String;
+	public final fun getPartCount ()I
+	public final fun getPartSizeBytes ()J
+	public final fun getPartsUploaded ()I
+	public final fun getResumed ()Z
+	public final fun getSizeBytes ()J
+	public final fun getStatusCode ()I
+	public final fun getUploadId ()Ljava/lang/String;
+	public final fun getUploadStrategy ()Ljava/lang/String;
+	public final fun getUploaded ()Z
+	public final fun getUrl ()Ljava/lang/String;
+	public final fun getUserId ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/VmodalFilePart {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;Lkotlin/jvm/functions/Function0;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;Lkotlin/jvm/functions/Function0;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;[BLjava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;[BLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getContentLength ()J
+	public final fun getContentType ()Ljava/lang/String;
+	public final fun getFieldName ()Ljava/lang/String;
+	public final fun getFileName ()Ljava/lang/String;
+	public final fun open ()Ljava/io/InputStream;
+}
+
+public final class com/vmodal/sdk/VmodalHttp {
+	public fun <init> (Lcom/vmodal/sdk/SdkConfig;Lcom/vmodal/sdk/VmodalTransport;)V
+	public synthetic fun <init> (Lcom/vmodal/sdk/SdkConfig;Lcom/vmodal/sdk/VmodalTransport;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getCfg ()Lcom/vmodal/sdk/SdkConfig;
+	public final fun getTransport ()Lcom/vmodal/sdk/VmodalTransport;
+	public final fun headers (ZZ)Ljava/util/Map;
+	public static synthetic fun headers$default (Lcom/vmodal/sdk/VmodalHttp;ZZILjava/lang/Object;)Ljava/util/Map;
+	public final fun request (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/util/Map;Ljava/util/List;Ljava/util/Map;)Ljava/util/Map;
+	public static synthetic fun request$default (Lcom/vmodal/sdk/VmodalHttp;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/util/Map;Ljava/util/List;Ljava/util/Map;ILjava/lang/Object;)Ljava/util/Map;
+	public final fun requestBytes (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/util/Map;)[B
+	public static synthetic fun requestBytes$default (Lcom/vmodal/sdk/VmodalHttp;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/util/Map;ILjava/lang/Object;)[B
+	public final fun requestUsers (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/util/Map;)Ljava/util/Map;
+	public static synthetic fun requestUsers$default (Lcom/vmodal/sdk/VmodalHttp;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/util/Map;ILjava/lang/Object;)Ljava/util/Map;
+}
+
+public final class com/vmodal/sdk/VmodalJson {
+	public static final field INSTANCE Lcom/vmodal/sdk/VmodalJson;
+	public final fun parse (Ljava/lang/String;)Ljava/lang/Object;
+	public final fun stringify (Ljava/lang/Object;)Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/VmodalRequest {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;Ljava/lang/Object;Ljava/util/Map;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;Ljava/lang/Object;Ljava/util/Map;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun component4 ()Ljava/util/Map;
+	public final fun component5 ()Ljava/lang/Object;
+	public final fun component6 ()Ljava/util/Map;
+	public final fun component7 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;Ljava/lang/Object;Ljava/util/Map;Ljava/util/List;)Lcom/vmodal/sdk/VmodalRequest;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/VmodalRequest;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Ljava/util/Map;Ljava/lang/Object;Ljava/util/Map;Ljava/util/List;ILjava/lang/Object;)Lcom/vmodal/sdk/VmodalRequest;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFiles ()Ljava/util/List;
+	public final fun getFormFields ()Ljava/util/Map;
+	public final fun getHeaders ()Ljava/util/Map;
+	public final fun getJsonBody ()Ljava/lang/Object;
+	public final fun getMethod ()Ljava/lang/String;
+	public final fun getPath ()Ljava/lang/String;
+	public final fun getQueryParameters ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/VmodalResponse {
+	public fun <init> (ILjava/lang/String;Ljava/util/Map;[B)V
+	public synthetic fun <init> (ILjava/lang/String;Ljava/util/Map;[BILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun component4 ()[B
+	public final fun copy (ILjava/lang/String;Ljava/util/Map;[B)Lcom/vmodal/sdk/VmodalResponse;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/VmodalResponse;ILjava/lang/String;Ljava/util/Map;[BILjava/lang/Object;)Lcom/vmodal/sdk/VmodalResponse;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBody ()Ljava/lang/String;
+	public final fun getBytes ()[B
+	public final fun getHeaders ()Ljava/util/Map;
+	public final fun getJson ()Ljava/lang/Object;
+	public final fun getStatusCode ()I
+	public fun hashCode ()I
+	public final fun jsonObject ()Ljava/util/Map;
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class com/vmodal/sdk/VmodalTransport {
+	public abstract fun execute (Lcom/vmodal/sdk/VmodalRequest;)Lcom/vmodal/sdk/VmodalResponse;
+}
+

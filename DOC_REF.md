@@ -6,18 +6,25 @@ uploads. This reference is generated from public Kotlin declarations and KDoc.
 It intentionally omits service hosts, endpoint paths, wire-level route tables,
 and implementation source.
 
-Unless a method name ends in `Async`, assume it is blocking and call it from
-`Dispatchers.IO`, WorkManager, or another worker thread.
+For new Kotlin integrations, use `Client.coroutines` and its `CoroutineClient`
+resources. Existing resource methods remain blocking unless their name ends in
+`Async`; call those from `Dispatchers.IO`, WorkManager, or another worker
+thread.
 
 ## Start here
 
 - Create a `Client` from `SdkConfig`, or use `Client.fromEnv` in tools that
   already manage environment configuration.
-- Confirm identity with `AuthResource.me` and availability with `Client.health`.
-- Browse collections with `CollectionsResource.listGroups`, search with
-  `SearchesResource.searchVideo`, and manage indexes with `IndexesResource`.
-- Start cancelable uploads with `videoUploadAsync`. Use `videoUpload` only from
-  a worker thread when blocking behavior is appropriate.
+- Create `CoroutineClient` with `Client.coroutines`; the caller owns its
+  ViewModel, lifecycle, application, or worker scope.
+- Confirm identity with `CoroutineAuthResource.me`, browse collections with
+  `CoroutineCollectionsResource.listGroups`, search with
+  `CoroutineSearchesResource.searchVideo`, and manage indexes through the
+  coroutine facade.
+- Collect `CoroutineCollectionsResource.videoUploadEvents` once for upload
+  progress and the final `VideoUploadEvent.Completed` result.
+- Keep `videoUploadAsync` and blocking `videoUpload` for callback, Java, and
+  incremental-migration consumers.
 - Handle failures through the `SdkError` hierarchy.
 
 ## Client resources
@@ -26,6 +33,12 @@ Unless a method name ends in `Async`, assume it is blocking and call it from
 authentication, search, collections, indexes, administration, object storage,
 and images. The Google Drive and SQL resources remain compatibility placeholders
 and fail with `FeatureDisabled` before transport.
+
+`CoroutineClient` is a lightweight facade over that same client. It creates no
+scope, retains no Android lifecycle object, and never selects
+`Dispatchers.Main`. Built-in cancellable transport calls cancel promptly with
+their caller. A legacy synchronous custom transport can stop result delivery
+but may not stop arbitrary blocking I/O immediately.
 
 `Client.unsafeDirect` is a trusted-network escape hatch. Do not treat caller
 identity values as an Internet trust boundary. Close or clear a mutable
@@ -49,6 +62,11 @@ The primary request types are `SearchRequest`, `DeleteCollectionRequest`,
 controls retries, cancellation-aware progress, optional resume state, and the
 explicit multipart opt-in. `UploadHandle.cancel` requests cancellation for
 asynchronous operations; completion and failure callbacks run at most once.
+
+`VideoUploadEvent` exposes `Progress` and one final `Completed` result through a
+cold Flow. Each collection starts an independent upload. Collector cancellation
+cancels the shared `UploadHandle`; applications that need multiple observers
+must share the single collection in an app-owned scope.
 
 `UploadSessionStore` persists resumable state. Use `MemoryUploadSessionStore`
 for process-local work or `FileUploadSessionStore` when WorkManager must resume

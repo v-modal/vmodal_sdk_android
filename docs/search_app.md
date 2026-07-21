@@ -4,9 +4,10 @@ The app in `examples/02_search` is a complete Jetpack Compose sample that
 uses Android's document picker to stream a `content://` video, uploads it,
 creates and polls an index job, searches the same collection and stream,
 resolves matching frames to image URLs, and displays them in an adaptive grid.
-Contributors use the Android SDK source project directly; release verification
-can switch the sample to the locally published Maven coordinate with
-`-PvmodalUseMavenLocal=true`.
+Contributors use the Android SDK source project directly. Artifact verification
+uses `bash test.sh ci`, which supplies `vmodalUseMavenLocal=true`, an absolute
+isolated `vmodalMavenRepo`, and the exact candidate version. Maven mode never
+falls back to a global Maven Local artifact.
 
 ## Run it
 

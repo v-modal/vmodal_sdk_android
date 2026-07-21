@@ -17,6 +17,7 @@ android {
     }
 
     sourceSets["main"].assets.srcDir("../asset")
+    sourceSets["main"].kotlin.srcDir("../../01_starter/src/main/kotlin")
 
     buildFeatures {
         compose = true
@@ -38,7 +39,7 @@ android {
 
 dependencies {
     if (providers.gradleProperty("vmodalUseMavenLocal").orNull == "true") {
-        val sdkVersion = providers.gradleProperty("vmodalSdkVersion").getOrElse("1.0.0")
+        val sdkVersion = providers.gradleProperty("vmodalSdkVersion").get()
         implementation("com.vmodal:vmodal-sdk-android:$sdkVersion")
     } else {
         implementation(project(":vmodal-sdk-android"))
@@ -53,6 +54,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.2")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("io.coil-kt:coil-compose:2.6.0")
 
     testImplementation("junit:junit:4.13.2")

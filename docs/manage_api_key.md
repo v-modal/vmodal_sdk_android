@@ -46,6 +46,36 @@ keys.clear()
 network or disk I/O. A configured provider takes precedence over the legacy
 static `token` field and never falls back to it after the provider is cleared.
 
+Rotation with `rotate()` is only for a replacement credential belonging to the
+same authenticated identity and tenant. The retained client reads the new value
+on its next request. Account or tenant changes require a new session and a new
+client; do not rotate one identity's provider into another identity.
+
+## Ordered logout and account-switch cleanup
+
+Use the same order from Compose, classic Views, and WorkManager integrations:
+
+1. Increment an app-owned session generation so callbacks from the old account
+   cannot publish new state.
+2. Cancel ViewModel/repository jobs and every retained upload handle.
+3. Cancel WorkManager work uniquely named or tagged for the old account and
+   remove its resumable upload checkpoints.
+4. Release persisted `content://` grants that the app should not retain across
+   sessions.
+5. Call `MutableApiKeyProvider.close()` or `clear()`. The next authenticated
+   SDK request then fails with `AuthError` before transport.
+6. Drop every retained `Client` and coroutine facade for the old session.
+7. Clear selected URIs, collection/version choices, progress, search rows,
+   image URLs, and account-scoped error/result state.
+8. Acquire a new runtime credential and create the next client only after the
+   new application identity is established.
+
+Persist account/scope/URI identifiers for durable work, never the credential or
+a signed URL. A worker must compare its persisted account identifier with the
+current session before it reopens a URI or creates an SDK request. The
+[compile-checked worker](../examples/01_starter/src/main/kotlin/com/vmodal/sdk/examples/VmodalUploadWorker.kt)
+shows this boundary.
+
 ## Rotation and ambiguous operations
 
 Use overlapping server-side rotation: issue the replacement credential, update

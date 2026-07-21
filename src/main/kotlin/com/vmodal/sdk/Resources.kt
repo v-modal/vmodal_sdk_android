@@ -9,7 +9,11 @@ class AuthResource(internal val http: VmodalHttp) {
 
     /** Returns true when authenticated access succeeds. */
     fun authCheck(userId: String = ""): Boolean {
-        val cfg = if (userId.isBlank()) http.cfg else http.cfg.copy(userId = userId.trim())
+        val cfg = if (userId.isBlank()) {
+            http.cfg
+        } else {
+            http.cfg.copy(userId = userId.trim()).withDiagnostics(http.cfg.diagnostics)
+        }
         AuthResource(VmodalHttp(cfg, http.transport)).health()
         return true
     }

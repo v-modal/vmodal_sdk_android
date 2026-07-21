@@ -1,6 +1,9 @@
 package com.vmodal.sdk
 
 import java.io.IOException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 
 /**
  * Supported low-level request facade used by resource classes.
@@ -68,7 +71,73 @@ class VmodalHttp(
         val headers = headers(forceToken = true, requireUserId = false)
         if (headers["Authorization"].isNullOrBlank()) throw AuthError("API key is required for users_api routes")
         val url = if (strIsAbsoluteHttpUrl(path)) path else strUsersBaseUrl(cfg.normalizedBaseUrl) + path
-        return execute(method, url, json, params = params, headers = headers).jsonObject()
+        return execute(
+            method,
+            url,
+            json,
+            params = params,
+            headers = headers,
+            transportKind = DiagnosticTransportKind.USERS_API,
+        ).jsonObject()
+    }
+
+    /** Coroutine counterpart used by the additive coroutine facade. */
+    internal suspend fun requestSuspend(
+        method: String,
+        path: String,
+        json: Any? = null,
+        data: Map<String, Any?> = emptyMap(),
+        files: List<VmodalFilePart> = emptyList(),
+        params: Map<String, Any?> = emptyMap(),
+        fallbackDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    ): Map<String, Any?> = executeSuspend(
+        method,
+        path,
+        json,
+        data,
+        files,
+        params,
+        headers(),
+        fallbackDispatcher = fallbackDispatcher,
+    ).jsonObject()
+
+    /** Coroutine counterpart for bounded binary requests. */
+    internal suspend fun requestBytesSuspend(
+        method: String,
+        path: String,
+        json: Any? = null,
+        params: Map<String, Any?> = emptyMap(),
+        fallbackDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    ): ByteArray = executeSuspend(
+        method,
+        path,
+        json,
+        params = params,
+        headers = headers(),
+        responseMode = VmodalResponseMode.BYTES,
+        fallbackDispatcher = fallbackDispatcher,
+    ).bytes
+
+    /** Coroutine counterpart for credential-authenticated user-lifecycle requests. */
+    internal suspend fun requestUsersSuspend(
+        method: String,
+        path: String,
+        json: Any? = null,
+        params: Map<String, Any?> = emptyMap(),
+        fallbackDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    ): Map<String, Any?> {
+        val headers = headers(forceToken = true, requireUserId = false)
+        if (headers["Authorization"].isNullOrBlank()) throw AuthError("API key is required for users_api routes")
+        val url = if (strIsAbsoluteHttpUrl(path)) path else strUsersBaseUrl(cfg.normalizedBaseUrl) + path
+        return executeSuspend(
+            method,
+            url,
+            json,
+            params = params,
+            headers = headers,
+            transportKind = DiagnosticTransportKind.USERS_API,
+            fallbackDispatcher = fallbackDispatcher,
+        ).jsonObject()
     }
 
     private fun execute(
@@ -80,38 +149,158 @@ class VmodalHttp(
         params: Map<String, Any?> = emptyMap(),
         headers: Map<String, String>,
         responseMode: VmodalResponseMode = VmodalResponseMode.TEXT,
+        transportKind: DiagnosticTransportKind = DiagnosticTransportKind.GATEWAY,
     ): VmodalResponse {
-        strRequireSameOrigin(path, cfg.normalizedBaseUrl)
-        val normalizedMethod = method.uppercase()
-        val canAutoRetry = normalizedMethod == "GET" || normalizedMethod == "HEAD"
-        val attempts = cfg.normalizedMaxRetries + 1
-        val request = VmodalRequest(normalizedMethod, path, params, headers, json, data, files).also {
-            it.responseMode = responseMode
+        val request = prepareRequest(method, path, json, data, files, params, headers, responseMode)
+        val attempts = attemptCount(request.method)
+        val diagnostics = cfg.diagnostics
+        val correlationId = diagnostics.strCorrelationId()
+        val metadata = if (diagnostics.enabled) {
+            diagnosticRequestMetadataSafely(json, data, params, files, responseMode)
+        } else {
+            null
         }
         var last: IOException? = null
         repeat(attempts) { idx ->
+            var terminal = false
+            val item = metadata?.let {
+                diagnostics.startAttempt(
+                    correlationId,
+                    transportKind,
+                    request.method,
+                    idx + 1,
+                    if (transportKind == DiagnosticTransportKind.USERS_API) "users-api" else "gateway",
+                    it,
+                )
+            }
             try {
                 val res = transport.execute(request)
-                if (canAutoRetry && res.statusCode in RETRY_CODES && idx + 1 < attempts) {
+                if (shouldRetry(request.method, res.statusCode, idx, attempts)) {
+                    diagnostics.failure(item, ApiError("api request failed", statusCode = res.statusCode))
+                    terminal = true
                     retrySleep(idx)
                     return@repeat
                 }
-                raiseForStatus(res)
-                return res
+                val checked = responseOrThrow(res)
+                if (responseMode == VmodalResponseMode.TEXT) checked.jsonObject()
+                diagnostics.response(
+                    item,
+                    checked.statusCode,
+                    strResponseContentType(checked.headers),
+                    checked.bytes.size.toLong(),
+                    checked.body,
+                )
+                terminal = true
+                return checked
             } catch (exc: IOException) {
+                if (!terminal) diagnostics.failure(item, exc)
                 last = exc
-                if (canAutoRetry && idx + 1 < attempts) {
+                if (hasNextAttempt(idx, attempts)) {
                     retrySleep(idx)
                     return@repeat
                 }
                 throw TransportError(exc)
+            } catch (exc: Throwable) {
+                if (!terminal) diagnostics.failure(item, exc)
+                throw exc
             }
         }
         throw TransportError(last ?: IOException("request failed"))
     }
 
-    private fun raiseForStatus(response: VmodalResponse) {
-        if (response.statusCode in 200..299) return
+    private suspend fun executeSuspend(
+        method: String,
+        path: String,
+        json: Any? = null,
+        data: Map<String, Any?> = emptyMap(),
+        files: List<VmodalFilePart> = emptyList(),
+        params: Map<String, Any?> = emptyMap(),
+        headers: Map<String, String>,
+        responseMode: VmodalResponseMode = VmodalResponseMode.TEXT,
+        transportKind: DiagnosticTransportKind = DiagnosticTransportKind.GATEWAY,
+        fallbackDispatcher: CoroutineDispatcher,
+    ): VmodalResponse {
+        val request = prepareRequest(method, path, json, data, files, params, headers, responseMode)
+        val attempts = attemptCount(request.method)
+        val diagnostics = cfg.diagnostics
+        val correlationId = diagnostics.strCorrelationId()
+        val metadata = if (diagnostics.enabled) {
+            diagnosticRequestMetadataSafely(json, data, params, files, responseMode)
+        } else {
+            null
+        }
+        var last: IOException? = null
+        repeat(attempts) { idx ->
+            var terminal = false
+            val item = metadata?.let {
+                diagnostics.startAttempt(
+                    correlationId,
+                    transportKind,
+                    request.method,
+                    idx + 1,
+                    if (transportKind == DiagnosticTransportKind.USERS_API) "users-api" else "gateway",
+                    it,
+                )
+            }
+            try {
+                val res = transport.executeCancellable(request, fallbackDispatcher)
+                if (shouldRetry(request.method, res.statusCode, idx, attempts)) {
+                    diagnostics.failure(item, ApiError("api request failed", statusCode = res.statusCode))
+                    terminal = true
+                    delay(retryDelayMillis(idx))
+                    return@repeat
+                }
+                val checked = responseOrThrow(res)
+                if (responseMode == VmodalResponseMode.TEXT) checked.jsonObject()
+                diagnostics.response(
+                    item,
+                    checked.statusCode,
+                    strResponseContentType(checked.headers),
+                    checked.bytes.size.toLong(),
+                    checked.body,
+                )
+                terminal = true
+                return checked
+            } catch (exc: IOException) {
+                if (!terminal) diagnostics.failure(item, exc)
+                last = exc
+                if (hasNextAttempt(idx, attempts)) {
+                    delay(retryDelayMillis(idx))
+                    return@repeat
+                }
+                throw TransportError(exc)
+            } catch (exc: Throwable) {
+                if (!terminal) diagnostics.failure(item, exc)
+                throw exc
+            }
+        }
+        throw TransportError(last ?: IOException("request failed"))
+    }
+
+    private fun prepareRequest(
+        method: String,
+        path: String,
+        json: Any?,
+        data: Map<String, Any?>,
+        files: List<VmodalFilePart>,
+        params: Map<String, Any?>,
+        headers: Map<String, String>,
+        responseMode: VmodalResponseMode,
+    ): VmodalRequest {
+        strRequireSameOrigin(path, cfg.normalizedBaseUrl)
+        return VmodalRequest(method.uppercase(), path, params, headers, json, data, files).also {
+            it.responseMode = responseMode
+        }
+    }
+
+    private fun attemptCount(method: String): Int =
+        if (isRetryableMethod(method)) cfg.normalizedMaxRetries + 1 else 1
+
+    private fun shouldRetry(method: String, statusCode: Int, idx: Int, attempts: Int): Boolean =
+        isRetryableMethod(method) && statusCode in RETRY_CODES && hasNextAttempt(idx, attempts)
+
+    private fun responseOrThrow(response: VmodalResponse): VmodalResponse {
+        if (response.statusCode in 200..299) return response
         val contentType = response.headers.entries.firstOrNull { it.key.equals("Content-Type", true) }
             ?.value?.joinToString(";").orEmpty()
         val looksJson = "json" in contentType.lowercase() || response.body.trimStart().startsWith('{') ||
@@ -131,7 +320,7 @@ class VmodalHttp(
 
     private fun retrySleep(idx: Int) {
         try {
-            Thread.sleep(50L * (idx + 1))
+            Thread.sleep(retryDelayMillis(idx))
         } catch (exc: InterruptedException) {
             Thread.currentThread().interrupt()
             throw ApiError("request interrupted").also { it.initCause(exc) }
@@ -140,6 +329,12 @@ class VmodalHttp(
 
     private companion object {
         val RETRY_CODES = setOf(500, 502, 503, 504)
+
+        fun isRetryableMethod(method: String): Boolean = method == "GET" || method == "HEAD"
+
+        fun hasNextAttempt(idx: Int, attempts: Int): Boolean = idx + 1 < attempts
+
+        fun retryDelayMillis(idx: Int): Long = 50L * (idx + 1)
 
         fun strHeaderValue(name: String, value: String): String {
             if (value.length > 4_096 || value.any { it.isISOControl() }) {

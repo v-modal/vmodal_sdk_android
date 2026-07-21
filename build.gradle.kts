@@ -8,7 +8,9 @@ import org.gradle.language.base.artifact.SourcesArtifact
 import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
 
 plugins {
+    `java-library`
     kotlin("jvm") version "1.9.24"
+    id("org.jetbrains.kotlinx.binary-compatibility-validator") version "0.15.1"
     id("org.jetbrains.dokka") version "2.2.0"
     id("com.vanniktech.maven.publish") version "0.34.0"
     id("project-report")
@@ -18,6 +20,7 @@ group = "com.vmodal"
 version = "1.0.0"
 
 dependencies {
+    api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.moshi:moshi:1.15.2")
 }
@@ -107,6 +110,12 @@ mavenPublishing {
     }
 }
 
+val compatibilityRepo = layout.buildDirectory.dir("compat-repo")
+publishing.repositories.maven {
+    name = "Compatibility"
+    url = uri(compatibilityRepo)
+}
+
 val githubPackagesUser = providers.environmentVariable("GITHUB_PACKAGES_USERNAME")
 val githubPackagesToken = providers.environmentVariable("GITHUB_PACKAGES_TOKEN")
 if (githubPackagesUser.isPresent && githubPackagesToken.isPresent) {
@@ -132,18 +141,62 @@ val live by sourceSets.creating {
     runtimeClasspath += output + compileClasspath
 }
 
-if (file("src/test/kotlin/com/vmodal/sdk/VmodalSdkRegressionTest.kt").isFile) {
-    tasks.register<JavaExec>("regressionTest") {
-        dependsOn(tasks.testClasses)
-        classpath = sourceSets.test.get().runtimeClasspath
-        mainClass.set("com.vmodal.sdk.VmodalSdkRegressionTestKt")
-    }
+val deterministicTests = listOf(
+    Triple("regressionTest", "VmodalSdkRegressionTest.kt", "com.vmodal.sdk.VmodalSdkRegressionTestKt"),
+    Triple("compatibilityBaselineTest", "CompatibilityBaselineTest.kt", "com.vmodal.sdk.CompatibilityBaselineTestKt"),
+    Triple("transportIntegrationTest", "TransportIntegrationTest.kt", "com.vmodal.sdk.TransportIntegrationTestKt"),
+    Triple("p2HttpTest", "P2HttpRegressionTest.kt", "com.vmodal.sdk.P2HttpRegressionTestKt"),
+    Triple("coroutineApiRegressionTest", "CoroutineApiRegressionTest.kt", "com.vmodal.sdk.CoroutineApiRegressionTestKt"),
+    Triple("diagnosticsRegressionTest", "DiagnosticsRegressionTest.kt", "com.vmodal.sdk.DiagnosticsRegressionTestKt"),
+)
 
-    tasks.test {
-        dependsOn("regressionTest")
-        enabled = false
+deterministicTests.forEach { (taskName, fileName, className) ->
+    if (file("src/test/kotlin/com/vmodal/sdk/$fileName").isFile) {
+        tasks.register<JavaExec>(taskName) {
+            dependsOn(tasks.testClasses)
+            if (taskName == "compatibilityBaselineTest") {
+                dependsOn(
+                    "apiCheck",
+                    "dokkaGeneratePublicationHtml",
+                    "publishAllPublicationsToCompatibilityRepository",
+                )
+            }
+            classpath = sourceSets.test.get().runtimeClasspath
+            mainClass.set(className)
+        }
+        tasks.test { dependsOn(taskName) }
     }
 }
+
+tasks.register<Exec>("artifactConsumerTest") {
+    dependsOn("publishAllPublicationsToCompatibilityRepository")
+    workingDir("integration/consumer")
+    commandLine(
+        file("gradlew").absolutePath,
+        "-p", ".",
+        "--no-daemon",
+        "--dependency-verification", "strict",
+        "-PvmodalMavenRepo=${compatibilityRepo.get().asFile.absolutePath}",
+        "-PvmodalSdkVersion=$version",
+        "clean",
+        "classes",
+    )
+}
+
+tasks.register<Exec>("cookbookCheck") {
+    group = "verification"
+    description = "Compiles the canonical Android integration cookbook sources."
+    workingDir(layout.projectDirectory)
+    commandLine(
+        file("examples/02_search/gradlew").absolutePath,
+        "-p", file("examples/01_starter").absolutePath,
+        "--no-daemon",
+        "--dependency-verification", "strict",
+        ":compileDebugKotlin",
+    )
+}
+
+tasks.test { enabled = false }
 
 if (file("src/sim/kotlin/com/vmodal/sdk/SimApp.kt").isFile) {
     tasks.register<JavaExec>("runSim") {

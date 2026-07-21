@@ -1,3 +1,5 @@
+<a id="fullapp-demo"></a>
+
 # VModal Android full search application
 
 
@@ -10,6 +12,12 @@
 
 The example deliberately exposes each stage as a separate action. A beginner
 can validate one SDK contract at a time and stop at the first failed stage.
+
+This is a downstream consumer smoke application, not a reusable VModal UI
+library. A consuming app owns navigation, state presentation, accessibility,
+theming, and its design system.
+
+![VModal Android application and searchable media screens](../../assets/dev_homepage.jpg)
 
 ```text
 authentication
@@ -125,6 +133,8 @@ A completed state such as `success`, `completed`, `done`, or `ok` means that
 the collection may already be searchable. A queued state should be checked by
 job ID, while an empty list means a new index may be needed.
 
+<a id="fullapp-upload"></a>
+
 ## 3. Select or upload a video
 
 The default source is
@@ -173,6 +183,8 @@ client.collections.videoUploadAsync(
 Changing Collection or Stream clears upload, index, and search state so a job
 or result from one scope is not accidentally presented as belonging to another.
 
+<a id="fullapp-index"></a>
+
 ## 4. Create and inspect the image index
 
 After an upload, or when an existing collection has no ready image index:
@@ -200,6 +212,8 @@ Index creation is asynchronous. A successful submit response means the job was
 accepted, not that the collection is ready. The refresh action calls
 `client.indexes.indexStatus(jobId)` and leaves polling cadence under the user's
 control, as in the Flutter example.
+
+<a id="fullapp-search"></a>
 
 ## 5. Search and inspect results
 
@@ -268,6 +282,8 @@ credential, upload, or index work changes. Coil fetches the pre-signed URL
 directly without the VModal Bearer header. URLs are never used as card IDs,
 persisted, or logged.
 
+<a id="fullapp-credentials"></a>
+
 ## Credential and lifecycle behavior
 
 - The API-key field uses ordinary in-memory Compose state, not saved state.
@@ -322,20 +338,20 @@ With an unlocked API 24+ emulator or device connected, run the Compose tests:
 ./gradlew --no-daemon :app:connectedDebugAndroidTest
 ```
 
-## Test a locally published SDK artifact
+## Test the isolated SDK artifact
 
-By default, the example compiles the SDK source checkout. To verify a locally
-published Maven artifact instead, publish from the SDK root and enable the
-project switch:
+By default, the example compiles the SDK source checkout. To verify the exact
+checksummed Maven artifact used by pull-request CI, run:
 
 ```bash
 cd uinterface/sdk_android
-./gradlew --no-daemon clean build publishToMavenLocal
-
-cd examples/03_fullapp
-./gradlew --no-daemon :app:assembleDebug \
-  -PvmodalUseMavenLocal=true -PvmodalSdkVersion=1.0.0
+bash test.sh ci
 ```
+
+The dispatcher passes an isolated `vmodalMavenRepo` and exact SDK version. In
+Maven mode this app resolves the SDK coordinate only from that repository,
+runs deterministic unit tests with live retrieval disabled, and never falls
+back to global Maven Local or the SDK source project.
 
 ## Troubleshooting
 

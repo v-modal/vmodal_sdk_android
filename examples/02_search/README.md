@@ -98,27 +98,21 @@ To install it on a connected device or running emulator:
 Check the available devices with `adb devices`, then launch **VModal Upload &
 Search** from the Android launcher.
 
-## Test the locally published SDK artifact
+## Test the isolated SDK artifact
 
-The default build consumes the SDK source checkout. To verify the same app
-against a locally published Maven artifact, first publish from the SDK root:
+The default build consumes the SDK source checkout. To verify the app against
+the exact checksummed Maven artifact used by pull-request CI, run:
 
 ```bash
 cd uinterface/sdk_android
-./gradlew --no-daemon clean build publishToMavenLocal
+bash test.sh ci
 ```
 
-Then build the example with the Maven-local switch and matching version:
-
-```bash
-cd examples/02_search
-./gradlew --no-daemon :app:assembleDebug \
-  -PvmodalUseMavenLocal=true -PvmodalSdkVersion=1.0.0
-```
-
-When `vmodalUseMavenLocal` is enabled, the app resolves
-`com.vmodal:vmodal-sdk-android:<version>` from `mavenLocal()` instead of
-including the SDK source project.
+The dispatcher passes `vmodalUseMavenLocal=true`, an absolute
+`vmodalMavenRepo`, and the exact `vmodalSdkVersion`. In Maven mode, repository
+content filtering resolves `com.vmodal:vmodal-sdk-android:<version>` only from
+that isolated directory and never falls back to global Maven Local or the SDK
+source project.
 
 ## Request and data flow
 

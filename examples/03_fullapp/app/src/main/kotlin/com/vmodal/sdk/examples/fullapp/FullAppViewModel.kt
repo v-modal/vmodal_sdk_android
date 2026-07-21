@@ -10,20 +10,16 @@ import com.vmodal.sdk.MutableApiKeyProvider
 import com.vmodal.sdk.PUBLIC_GATEWAY_URL
 import com.vmodal.sdk.SdkError
 import com.vmodal.sdk.UploadSource
-import com.vmodal.sdk.videoUploadAsync
+import com.vmodal.sdk.VideoUploadEvent
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
 import java.util.Locale
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 private const val DEFAULT_COLLECTION = "android_example"
 private const val DEFAULT_STREAM = "astream"
@@ -128,7 +124,7 @@ class FullAppViewModel private constructor(
         searchGeneration++
         mutableState.update(::resetSearch)
         runAction(FullAppAction.IDENTITY) {
-            val output = withContext(Dispatchers.IO) { repo.resolveIdentity() }
+            val output = repo.resolveIdentity()
             val current = mutableState.value
             val selected = if (output.collections.isNotEmpty() && current.collection !in output.collections) {
                 output.collections.first()
@@ -159,7 +155,7 @@ class FullAppViewModel private constructor(
     }
 
     fun refreshCollections() = runAction(FullAppAction.COLLECTIONS) {
-        val names = withContext(Dispatchers.IO) { repo.listCollections() }
+        val names = repo.listCollections()
         mutableState.update {
             it.copy(
                 action = null,
@@ -259,9 +255,7 @@ class FullAppViewModel private constructor(
         searchGeneration++
         mutableState.update(::resetSearch)
         runAction(FullAppAction.CREATE_INDEX) {
-            val output = withContext(Dispatchers.IO) {
-                repo.createIndex(state.collection.trim(), state.stream.trim())
-            }
+            val output = repo.createIndex(state.collection.trim(), state.stream.trim())
             mutableState.update {
                 it.copy(
                     action = null,
@@ -277,7 +271,7 @@ class FullAppViewModel private constructor(
         val jobId = mutableState.value.indexJobId
         if (jobId.isBlank()) return showError("Create an index job first.")
         runAction(FullAppAction.INDEX_STATUS) {
-            val output = withContext(Dispatchers.IO) { repo.indexStatus(jobId) }
+            val output = repo.indexStatus(jobId)
             val status = output.status.ifBlank { "unknown" }
             mutableState.update {
                 it.copy(
@@ -301,9 +295,7 @@ class FullAppViewModel private constructor(
         val generation = ++searchGeneration
         mutableState.update { resetSearch(it).copy(action = FullAppAction.SEARCH, error = "") }
         runAction(FullAppAction.SEARCH) {
-            val output = withContext(Dispatchers.IO) {
-                repo.search(scope.query, scope.collection, scope.stream)
-            }
+            val output = repo.search(scope.query, scope.collection, scope.stream)
             if (!isCurrentSearch(generation, scope)) return@runAction
             val names = repo.lastCollections
             mutableState.update {
@@ -453,9 +445,9 @@ internal class FullAppRepository {
         sdk = Client(baseUrl = PUBLIC_GATEWAY_URL, apiKeyProvider = keys)
     }
 
-    fun resolveIdentity(): IdentityOutput {
+    suspend fun resolveIdentity(): IdentityOutput {
         val client = requireClient()
-        val me = client.auth.me()
+        val me = client.coroutines().auth.me()
         val userId = requireNotNull(me.userId) { "auth/me returned no user_id" }
         sdk = Client(
             client.cfg.copy(
@@ -467,8 +459,8 @@ internal class FullAppRepository {
         return IdentityOutput(me.type, listCollections())
     }
 
-    fun listCollections(): List<String> {
-        lastCollections = requireClient().collections.listGroups("vid_file").data
+    suspend fun listCollections(): List<String> {
+        lastCollections = requireClient().coroutines().collections.listGroups("vid_file").data
             .asSequence()
             .filter { it.mode == "vid_file" }
             .map { it.groupName.trim() }
@@ -484,34 +476,28 @@ internal class FullAppRepository {
         collection: String,
         stream: String,
         onProgress: (Int) -> Unit,
-    ): String = suspendCancellableCoroutine { continuation ->
-        val handle = requireClient().collections.videoUploadAsync(
+    ): String {
+        var completed = ""
+        requireClient().coroutines().collections.videoUploadEvents(
             source = source,
             collectionName = collection,
             subCollectionName = stream,
-            onProgress = {
-                if (continuation.isActive) onProgress(it.percent)
-            },
-            onSuccess = { result ->
-                if (continuation.isActive) {
-                    if (result.uploaded) {
-                        continuation.resume(result.fileName.ifBlank { source.fileName })
-                    } else {
-                        continuation.resumeWithException(
-                            IllegalStateException("Upload did not complete: ${result.raw}"),
-                        )
+        ).collect { event ->
+            when (event) {
+                is VideoUploadEvent.Progress -> onProgress(event.progress.percent)
+                is VideoUploadEvent.Completed -> {
+                    check(event.response.uploaded) {
+                        "Upload did not complete: ${event.response.raw}"
                     }
+                    completed = event.response.fileName.ifBlank { source.fileName }
                 }
-            },
-            onFailure = { error ->
-                if (continuation.isActive) continuation.resumeWithException(error)
-            },
-        )
-        continuation.invokeOnCancellation { handle.cancel() }
+            }
+        }
+        return completed.ifBlank { error("Upload completed without a result.") }
     }
 
-    fun createIndex(collection: String, stream: String): IndexOutput {
-        val result = requireClient().indexes.createIndex(
+    suspend fun createIndex(collection: String, stream: String): IndexOutput {
+        val result = requireClient().coroutines().indexes.createIndex(
             mode = "vid_file",
             groupName = collection,
             streamName = stream,
@@ -523,14 +509,15 @@ internal class FullAppRepository {
         return IndexOutput(result.jobId, result.status)
     }
 
-    fun indexStatus(jobId: String): IndexOutput {
-        val result = requireClient().indexes.indexStatus(jobId)
+    suspend fun indexStatus(jobId: String): IndexOutput {
+        val result = requireClient().coroutines().indexes.indexStatus(jobId)
         return IndexOutput(result.jobId.ifBlank { jobId }, result.status)
     }
 
-    fun search(query: String, collection: String, stream: String): SearchOutput {
+    suspend fun search(query: String, collection: String, stream: String): SearchOutput {
         val client = requireClient()
-        val groups = client.collections.listGroups("vid_file")
+        val coroutines = client.coroutines()
+        val groups = coroutines.collections.listGroups("vid_file")
         lastCollections = groups.data
             .filter { it.mode == "vid_file" }
             .map { it.groupName.trim() }
@@ -541,7 +528,7 @@ internal class FullAppRepository {
             ?: error("Collection $collection is not available for this API key. Choose a loaded collection or upload it first.")
         val version = item.latestLancedbVersion
             ?: error("Collection $collection has no advertised LanceDB index version. Create or finish its image index before searching.")
-        val response = client.searches.searchVideo(
+        val response = coroutines.searches.searchVideo(
             queryText = query,
             mode = "vid_file",
             groupName = collection,
@@ -556,7 +543,7 @@ internal class FullAppRepository {
         val records = if (candidates.isEmpty()) {
             emptyList()
         } else {
-            client.images.getUrlBulk(candidates.map { it.record }).records
+            coroutines.images.getUrlBulk(candidates.map { it.record }).records
         }
         return searchOutput(
             candidates = candidates,

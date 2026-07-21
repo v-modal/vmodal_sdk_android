@@ -317,7 +317,7 @@ internal fun strMultipartValue(name: String, value: String, maxLength: Int): Str
 
 private fun String.strMultipartQuoted(): String = replace("\\", "\\\\").replace("\"", "\\\"")
 
-private fun VmodalRequest.validateMultipart() {
+internal fun VmodalRequest.validateMultipart() {
     formFields.keys.forEach { strMultipartValue("field name", it, 128) }
 }
 
