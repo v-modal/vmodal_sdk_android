@@ -282,6 +282,15 @@ Gateway mode is the default. It sends caller identity only through `Authorizatio
 - JSON/text responses are bounded to 8 MiB, errors to 1 MiB, and binary responses to 64 MiB.
 - Presigned uploads never receive the VModal bearer credential or identity headers.
 
+Releases use a **minimal release security** profile with one blocking security
+job: candidate-tree verified-secret detection. Normal SDK tests, route sync,
+authenticated live tests, clean consumers, version/license checks, and tested-
+artifact checksums remain blocking correctness gates. OSV/SBOM generation,
+full-history scanning, strict dependency-verification metadata, wrapper-JAR
+shell hashing, and compiled route-string scans are preserved but inactive. The
+profile therefore does not claim a complete dependency or supply-chain audit;
+see the [Maven Central release guide](docs/maven_release.md) for residual risks.
+
 For the complete contract, read [SDK behavior and uploads](docs/sdk_doc.md) and [runtime API-key management](docs/manage_api_key.md).
 
 ## Android toolchain

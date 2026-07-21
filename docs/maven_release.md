@@ -6,10 +6,12 @@ Published coordinates are:
 com.vmodal:vmodal-sdk-android:<version>
 ```
 
-The SDK remains a production-release NO-GO until the security plan's runtime,
-backend, storage, endpoint-ownership, credential-rotation, and artifact gates
-have evidence. The workflow is manual and all publishing jobs require approval
-from the protected `sdk-android-production` environment.
+The workflow uses a **minimal release security** profile for fast publication.
+Its only blocking security job is `secret_detection`. The workflow remains
+manual, and publication jobs require approval from the protected
+`sdk-android-production` environment. SDK, live API, consumer, version,
+license, source-SHA, and artifact-checksum failures remain blocking correctness
+failures; this profile is not a complete supply-chain security audit.
 
 ## Pull-request CI authority boundary
 
@@ -19,10 +21,11 @@ uses immutable action commits, and never enters the production environment or
 references live/release secrets. The separate release workflow remains manual
 and protected.
 
-The `sdk_core` check runs route and policy checks, the normal SDK test
-lifecycle, strict dependency verification, Dokka, checked-in documentation
+The `sdk_core` check runs route-contract checks, the five-invariant minimal
+policy, the normal SDK test lifecycle, Dokka, checked-in documentation
 validation, and publication to a run-specific Maven repository under the
-runner temporary directory. Only after that succeeds do `clean_consumer`,
+runner temporary directory. Strict dependency-verification metadata is not
+enforced in this fast path. Only after `sdk_core` succeeds do `clean_consumer`,
 `search_example`, and `fullapp_example` download and checksum the exact
 run-ID/source-SHA artifact. These four check names are the branch-protection
 handoff; renaming one requires updating branch protection in the same rollout.
@@ -56,11 +59,11 @@ token-bearing remote URL or credential helper. Cloudflare protection is never
 disabled by this workflow; the live endpoint must have a permanent narrow CI
 rule or an authenticated service-token path.
 
-After the hardened dry run succeeds, revoke the previous combined classic PAT
+After the dry run succeeds, revoke the previous combined classic PAT
 and broad Cloudflare token. Review audit logs before revocation and record the
 owner, time, and replacement credential scope in the release evidence.
 
-## Immutable actions and dependency provenance
+## Minimal release security and immutable actions
 
 Every remote `uses:` reference must be a reviewed full 40-character commit SHA
 with its human-readable version in a comment. Before changing a SHA:
@@ -69,7 +72,7 @@ with its human-readable version in a comment. Before changing a SHA:
 2. review the action source, install/network behavior, inputs, post-step
    cleanup, and token handling at that commit;
 3. update the SHA and review record together;
-4. run `bash security_check.sh workflow` and a clean-cache workflow run.
+4. run `bash security_check.sh minimal` and a clean-cache workflow run.
 
 Current immutable inventory (source-review signoff is still required before the
 first production release):
@@ -83,28 +86,33 @@ first production release):
 | `actions/download-artifact` | v4 | `d3f86a106a0bac45b974a628896c90dbdf5c8093` |
 | `actions/create-github-app-token` | v2 | `fee1f7d63c2ff003460e3d139729b119787bc349` |
 
-Secret detection uses the TruffleHog 3.95.9 Linux amd64 release archive rather
-than its composite action, because that action defaults to a floating container
-tag. The workflow verifies archive SHA-256
+`secret_detection` checks out exactly `${{ github.sha }}` with depth 1 and
+persisted credentials disabled. It scans only the checked-out
+`uinterface/sdk_android` filesystem tree with verified findings enabled; it
+does not scan the private monorepo's Git history. The job uses the TruffleHog
+3.95.9 Linux amd64 archive and verifies archive SHA-256
 `f6d1106b85107d79527ed7a5b98b592beadd8b770dc3c9e8c1ad99e1b2cf127e`
-before execution.
+before execution. Download or checksum failure fails closed. The scanner uses
+bounded retries, emits no uploaded match report, and receives no production
+credential.
 
-The workflow also downloads OSV-Scanner 2.3.8 directly from its official
-release, verifies SHA-256
-`bc98e15319ed0d515e3f9235287ba53cdc5535d576d24fd573978ecfe9ab92dc`,
-scans both strict Gradle verification graphs, generates a CycloneDX 1.5 SBOM,
-and archives the scan, SBOM, and checksums for 90 days.
+`release_gate` explicitly depends on `secret_detection` and accepts only a
+`success` result. Documentation-only publication also depends on the same scan.
+A failed, skipped, cancelled, or timed-out scan cannot publish. To rerun after
+a scanner download outage, rerun the unchanged candidate SHA; do not bypass or
+convert the scan to a warning.
 
-`osv-scanner.toml` records short-lived, owner-named exceptions only for known
-build-tool transitive findings that are absent from the SDK runtime artifact.
-The current AGP exceptions expire on 2026-08-15; an expired exception makes the
-release scan fail and must be removed by upgrading AGP/Gradle, not extended
-without a new reviewed risk decision.
+The former aggregate policy, OSV scan, CycloneDX SBOM generation, wrapper-JAR
+shell hashing, plaintext source/JAR/APK/D8 route scans, diagnostic generated-
+output scans, and strict verification commands remain beside their former call
+sites under `DISABLED_FAST_RELEASE` comments. They are inactive and provide no
+blocking evidence in this profile. Route generation and source-of-truth route
+comparison remain active correctness tests.
 
 The SDK root, standalone consumer, search example, and full-app example retain
-reviewed `gradle/verification-metadata.xml` files. CI always passes
-`--dependency-verification strict`; it never generates metadata or falls back
-to `off` or `lenient`. The root and search example own the reviewed Gradle 8.6
+reviewed `gradle/verification-metadata.xml` files for optional audit use. Fast
+pull-request and release builds use dependency verification `off`; CI does not
+regenerate metadata. The root and search example own the reviewed Gradle 8.6
 wrapper. The full app delegates to that search wrapper, and the standalone
 consumer uses the root wrapper.
 
@@ -131,8 +139,8 @@ signing keys, ignored keys, and every new checksum before committing. The
 `com.vmodal:vmodal-sdk-android:1.0.0` trust entry is intentionally coordinate
 exact because candidate bytes change between commits; the CI SHA-256 manifest
 provides their provenance and is rechecked after download. Never generate
-metadata in CI. Wrapper distribution, distribution hash, JAR hash, executable
-bits, and full-app delegation remain enforced by `security_check.sh`.
+metadata in CI. These manual steps do not become release gates unless a later
+reviewed change deliberately restores them.
 
 After review, run `./gradlew --no-daemon verifyIdeSources` from the SDK root to
 confirm Android Studio can attach runtime dependency sources.
@@ -143,8 +151,30 @@ Generate the resolved dependency report before approval:
 ./gradlew --no-daemon --dependency-verification off dependencyReport
 ```
 
-Archive the report, verification metadata checksums, secret-scan result, and
-advisory-scan result with the release evidence.
+Archive the dependency report, optional verification-metadata review, secret-
+scan result, and tested artifact checksums with the release evidence.
+
+## Blocking correctness gates
+
+The reduced security profile does not weaken these release gates:
+
+- SDK compilation, unit/regression tests, and route-contract comparison;
+- authenticated live SDK and full-app tests;
+- Maven package and clean consumer/example builds;
+- source SHA and SDK/package version agreement;
+- binary/source JAR presence and packaged Apache license;
+- SHA-256 verification of the tested Maven artifact and publish rebuild; and
+- publication from the approved gate at the exact candidate commit.
+
+## Accepted residual risks
+
+The release owner accepts that this profile has no blocking evidence for
+vulnerable transitive dependencies or a current SBOM, old secrets elsewhere in
+private monorepo history, strict Gradle dependency checksum/signature
+verification, wrapper-JAR provenance beyond reviewed configuration and action
+pins, hidden route/config strings in compiled outputs, or a complete supply-
+chain audit. Preserved disabled code must not be described as a successful
+check.
 
 ## Local release candidate verification
 
@@ -169,8 +199,8 @@ consumer; and tests/builds both demos without live credentials.
 2. Dispatch `.github/workflows/sdk_android_test_release.yml` from that exact
    commit. First run all non-publishing jobs with every publish input false.
 3. Record the monorepo SHA, workflow run ID, JDK/Gradle versions, dependency
-   report, verification metadata checksums, OSV result, CycloneDX SBOM,
-   artifact checksums, and approvals.
+   report, secret-scan result, artifact checksums, and approvals. Record any
+   optional metadata, OSV, or SBOM review explicitly as non-blocking evidence.
 4. Re-run/approve the exact SHA with only the intended publication inputs.
    Either package destination requires `publish_sdk_android=true`; selecting
    only that source input is the explicit source-only mode. The
@@ -194,8 +224,8 @@ file-for-file by SHA-256 with the Maven consumable already tested by the Android
 example. Release credentials therefore cannot authorize fetching new build
 logic or publishing untested package bytes.
 
-All published JAR tasks disable file timestamps and use reproducible file order;
-`security_check.sh` fails if either deterministic-archive setting is removed.
+All published JAR tasks disable file timestamps and use reproducible file order.
+The Maven package job still verifies the packaged license and tested bytes.
 
 ## Failure and rollback
 
@@ -204,9 +234,6 @@ leave publishing frozen and correct the candidate on a new commit. If partial
 publication occurred, stop remaining targets, mark/yank the version where the
 registry permits it, rotate any exposed credential, investigate, and publish a
 new version. Roll an action back only to a previously reviewed full SHA; never
-restore a mutable tag, combined PAT, or broad Cloudflare bypass. Re-enable
-dependency verification after the fast-release period and validate it from a
-clean Gradle cache before making it a release gate again.
-
-Attach closure evidence to `docs/todo/security.md` only after the corresponding
-local, workflow, backend, storage, and post-publication checks actually pass.
+restore a mutable tag, combined PAT, or broad Cloudflare bypass. Any proposal to
+restore heavy checks must be reviewed separately and validated from a clean
+cache before becoming a release gate.
