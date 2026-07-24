@@ -852,6 +852,195 @@ public final class com/vmodal/sdk/Routes$UsersEndpoints {
 	public static final field r2UploadFolderVideo Ljava/lang/String;
 }
 
+public final class com/vmodal/sdk/ScopedAddAssetsOptions {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lcom/vmodal/sdk/ScopedAddAssetsOptions;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/ScopedAddAssetsOptions;Ljava/lang/String;ILjava/lang/Object;)Lcom/vmodal/sdk/ScopedAddAssetsOptions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMode ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/ScopedAssetChanges {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lcom/vmodal/sdk/ScopedAssetChanges;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/ScopedAssetChanges;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/vmodal/sdk/ScopedAssetChanges;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDescription ()Ljava/lang/String;
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getTags ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/ScopedCreateIndexOptions {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZ)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()Z
+	public final fun component11 ()Z
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Z
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()Ljava/lang/String;
+	public final fun component8 ()Ljava/lang/String;
+	public final fun component9 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZ)Lcom/vmodal/sdk/ScopedCreateIndexOptions;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/ScopedCreateIndexOptions;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZZILjava/lang/Object;)Lcom/vmodal/sdk/ScopedCreateIndexOptions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCreateIndex ()Z
+	public final fun getDryRun ()Z
+	public final fun getEmbeddingModel ()Ljava/lang/String;
+	public final fun getEndDate ()Ljava/lang/String;
+	public final fun getIndexType ()Ljava/lang/String;
+	public final fun getInsertMode ()Ljava/lang/String;
+	public final fun getModality ()Ljava/lang/String;
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getReProcess ()Z
+	public final fun getStartDate ()Ljava/lang/String;
+	public final fun getVersion ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/ScopedDeleteCollectionOptions {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;ZZ)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Z
+	public final fun component4 ()Z
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;ZZ)Lcom/vmodal/sdk/ScopedDeleteCollectionOptions;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/ScopedDeleteCollectionOptions;Ljava/lang/String;Ljava/lang/String;ZZILjava/lang/Object;)Lcom/vmodal/sdk/ScopedDeleteCollectionOptions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getConfirm ()Z
+	public final fun getDryRun ()Z
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getScope ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/ScopedDeleteIndexOptions {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;ZZ)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Z
+	public final fun component4 ()Z
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;ZZ)Lcom/vmodal/sdk/ScopedDeleteIndexOptions;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/ScopedDeleteIndexOptions;Ljava/lang/String;Ljava/lang/String;ZZILjava/lang/Object;)Lcom/vmodal/sdk/ScopedDeleteIndexOptions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getConfirm ()Z
+	public final fun getDryRun ()Z
+	public final fun getModality ()Ljava/lang/String;
+	public final fun getMode ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/ScopedIndexJobsOptions {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;I)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()I
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;I)Lcom/vmodal/sdk/ScopedIndexJobsOptions;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/ScopedIndexJobsOptions;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lcom/vmodal/sdk/ScopedIndexJobsOptions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLimit ()I
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getStatus ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/ScopedMetadataOptions {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Z)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Z
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Z)Lcom/vmodal/sdk/ScopedMetadataOptions;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/ScopedMetadataOptions;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)Lcom/vmodal/sdk/ScopedMetadataOptions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAllowOverlap ()Z
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getWriteMode ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/ScopedSearchOptions {
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIDDLjava/lang/Integer;)V
+	public synthetic fun <init> (Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIDDLjava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/Map;
+	public final fun component10 ()D
+	public final fun component11 ()D
+	public final fun component12 ()Ljava/lang/Integer;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/util/List;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()Ljava/lang/String;
+	public final fun component8 ()I
+	public final fun component9 ()I
+	public final fun copy (Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIDDLjava/lang/Integer;)Lcom/vmodal/sdk/ScopedSearchOptions;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/ScopedSearchOptions;Ljava/util/Map;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIDDLjava/lang/Integer;ILjava/lang/Object;)Lcom/vmodal/sdk/ScopedSearchOptions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEndDate ()Ljava/lang/String;
+	public final fun getImageEmbScoreMin ()D
+	public final fun getImageQuery ()Ljava/lang/String;
+	public final fun getLimit ()I
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getOffset ()I
+	public final fun getQueryMetadata ()Ljava/util/Map;
+	public final fun getSearchCombineMode ()Ljava/lang/String;
+	public final fun getSearchSources ()Ljava/util/List;
+	public final fun getStartDate ()Ljava/lang/String;
+	public final fun getTextEmbScoreMin ()D
+	public final fun getVersionLancedb ()Ljava/lang/Integer;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/ScopedUploadOptions {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;ILcom/vmodal/sdk/VideoUploadOptions;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ILcom/vmodal/sdk/VideoUploadOptions;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()I
+	public final fun component4 ()Lcom/vmodal/sdk/VideoUploadOptions;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;ILcom/vmodal/sdk/VideoUploadOptions;)Lcom/vmodal/sdk/ScopedUploadOptions;
+	public static synthetic fun copy$default (Lcom/vmodal/sdk/ScopedUploadOptions;Ljava/lang/String;Ljava/lang/String;ILcom/vmodal/sdk/VideoUploadOptions;ILjava/lang/Object;)Lcom/vmodal/sdk/ScopedUploadOptions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getModality ()Ljava/lang/String;
+	public final fun getMode ()Ljava/lang/String;
+	public final fun getTtl ()I
+	public final fun getUploadOptions ()Lcom/vmodal/sdk/VideoUploadOptions;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class com/vmodal/sdk/SdkConfig {
 	public static final field Companion Lcom/vmodal/sdk/SdkConfig$Companion;
 	public fun <init> ()V
@@ -1139,6 +1328,45 @@ public final class com/vmodal/sdk/UserProfile : com/vmodal/sdk/JsonBackedRespons
 	public final fun getTenantId ()Ljava/lang/String;
 	public final fun getType ()Ljava/lang/String;
 	public final fun getUserId ()Ljava/lang/String;
+}
+
+public final class com/vmodal/sdk/VModal {
+	public static final field INSTANCE Lcom/vmodal/sdk/VModal;
+	public final fun configure (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILcom/vmodal/sdk/ApiKeyProvider;)Lcom/vmodal/sdk/VModalProject;
+	public static synthetic fun configure$default (Lcom/vmodal/sdk/VModal;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILcom/vmodal/sdk/ApiKeyProvider;ILjava/lang/Object;)Lcom/vmodal/sdk/VModalProject;
+}
+
+public final class com/vmodal/sdk/VModalProject {
+	public final fun getProjectId ()Ljava/lang/String;
+	public final fun listCollections (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun listCollections$default (Lcom/vmodal/sdk/VModalProject;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun scope (Ljava/lang/String;Ljava/lang/String;)Lcom/vmodal/sdk/VModalScope;
+}
+
+public final class com/vmodal/sdk/VModalScope {
+	public final fun addAssets (Ljava/lang/String;Ljava/util/List;Lcom/vmodal/sdk/ScopedAddAssetsOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun addAssets$default (Lcom/vmodal/sdk/VModalScope;Ljava/lang/String;Ljava/util/List;Lcom/vmodal/sdk/ScopedAddAssetsOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun createIndex (Lcom/vmodal/sdk/ScopedCreateIndexOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun createIndex$default (Lcom/vmodal/sdk/VModalScope;Lcom/vmodal/sdk/ScopedCreateIndexOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun deleteCollection (Lcom/vmodal/sdk/ScopedDeleteCollectionOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun deleteCollection$default (Lcom/vmodal/sdk/VModalScope;Lcom/vmodal/sdk/ScopedDeleteCollectionOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun deleteIndex (Ljava/lang/String;Lcom/vmodal/sdk/ScopedDeleteIndexOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun deleteIndex$default (Lcom/vmodal/sdk/VModalScope;Ljava/lang/String;Lcom/vmodal/sdk/ScopedDeleteIndexOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun getCollectionName ()Ljava/lang/String;
+	public final fun getProjectId ()Ljava/lang/String;
+	public final fun getStreamName ()Ljava/lang/String;
+	public final fun indexStatus (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun listIndexJobs (Lcom/vmodal/sdk/ScopedIndexJobsOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun listIndexJobs$default (Lcom/vmodal/sdk/VModalScope;Lcom/vmodal/sdk/ScopedIndexJobsOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun search (Ljava/lang/String;Lcom/vmodal/sdk/ScopedSearchOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun search$default (Lcom/vmodal/sdk/VModalScope;Ljava/lang/String;Lcom/vmodal/sdk/ScopedSearchOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun updateAsset (Ljava/lang/String;Lcom/vmodal/sdk/ScopedAssetChanges;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun upload (Lcom/vmodal/sdk/UploadSource;Lcom/vmodal/sdk/ScopedUploadOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun upload$default (Lcom/vmodal/sdk/VModalScope;Lcom/vmodal/sdk/UploadSource;Lcom/vmodal/sdk/ScopedUploadOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun uploadEvents (Lcom/vmodal/sdk/UploadSource;Lcom/vmodal/sdk/ScopedUploadOptions;)Lkotlinx/coroutines/flow/Flow;
+	public static synthetic fun uploadEvents$default (Lcom/vmodal/sdk/VModalScope;Lcom/vmodal/sdk/UploadSource;Lcom/vmodal/sdk/ScopedUploadOptions;ILjava/lang/Object;)Lkotlinx/coroutines/flow/Flow;
+	public final fun uploadMetadata (Lcom/vmodal/sdk/VmodalFilePart;Lcom/vmodal/sdk/ScopedMetadataOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun uploadMetadata$default (Lcom/vmodal/sdk/VModalScope;Lcom/vmodal/sdk/VmodalFilePart;Lcom/vmodal/sdk/ScopedMetadataOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public final class com/vmodal/sdk/ValidationFailed : com/vmodal/sdk/SdkError {

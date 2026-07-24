@@ -147,6 +147,7 @@ val deterministicTests = listOf(
     Triple("transportIntegrationTest", "TransportIntegrationTest.kt", "com.vmodal.sdk.TransportIntegrationTestKt"),
     Triple("p2HttpTest", "P2HttpRegressionTest.kt", "com.vmodal.sdk.P2HttpRegressionTestKt"),
     Triple("coroutineApiRegressionTest", "CoroutineApiRegressionTest.kt", "com.vmodal.sdk.CoroutineApiRegressionTestKt"),
+    Triple("vModalFacadeTest", "VModalFacadeTest.kt", "com.vmodal.sdk.VModalFacadeTestKt"),
     Triple("diagnosticsRegressionTest", "DiagnosticsRegressionTest.kt", "com.vmodal.sdk.DiagnosticsRegressionTestKt"),
 )
 

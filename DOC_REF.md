@@ -6,15 +6,20 @@ uploads. This reference is generated from public Kotlin declarations and KDoc.
 It intentionally omits service hosts, endpoint paths, wire-level route tables,
 and implementation source.
 
-For new Kotlin integrations, use `Client.coroutines` and its `CoroutineClient`
-resources. Existing resource methods remain blocking unless their name ends in
-`Async`; call those from `Dispatchers.IO`, WorkManager, or another worker
-thread.
+For new content integrations, use `VModal.configure` and create an immutable
+`VModalScope` for one project, collection, and stream. Use `Client.coroutines`
+for authentication, administration, images, R2, and advanced compatibility
+operations that are not represented by the scoped facade. Existing resource
+methods remain supported.
 
 ## Start here
 
-- Create a `Client` from `SdkConfig`, or use `Client.fromEnv` in tools that
-  already manage environment configuration.
+- Create a `VModalProject` with `VModal.configure`, then select content with
+  `VModalProject.scope`.
+- Reuse that immutable `VModalScope` for upload, metadata, search, asset,
+  index, and deletion operations so organization fields cannot drift.
+- Create a lower-level `Client` from `SdkConfig`, or use `Client.fromEnv`, for
+  authentication and advanced resources.
 - Create `CoroutineClient` with `Client.coroutines`; the caller owns its
   ViewModel, lifecycle, application, or worker scope.
 - Confirm identity with `CoroutineAuthResource.me`, browse collections with
@@ -33,6 +38,11 @@ thread.
 authentication, search, collections, indexes, administration, object storage,
 and images. The Google Drive and SQL resources remain compatibility placeholders
 and fail with `FeatureDisabled` before transport.
+
+`VModalProject` and `VModalScope` are immutable high-level delegates over those
+same clients. They encode `projectId` plus `collectionName` internally and map
+`streamName` consistently across content operations. Public scoped options do
+not expose backend organization fields.
 
 `CoroutineClient` is a lightweight facade over that same client. It creates no
 scope, retains no Android lifecycle object, and never selects

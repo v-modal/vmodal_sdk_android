@@ -1,11 +1,25 @@
 # Coroutines and upload Flow
 
-Use the coroutine facade for new Kotlin integrations. Existing
-[blocking resources](../DOC_REF.md) and the callback-based
+Use `VModal.configure(...).scope(...)` for new project/collection/stream
+content integrations. Its network operations are suspend functions and upload
+events are a cold Flow. Use the lower-level coroutine facade for authentication,
+administration, and advanced resources. Existing [blocking resources](../DOC_REF.md) and the callback-based
 [`videoUploadAsync`](../DOC_REF.md) remain supported for incremental migration
 and Java callers.
 
 ## Entry point and ownership
+
+The scoped facade keeps organization immutable:
+
+```kotlin
+val content = VModal.configure("food_app", apiKey)
+    .scope("user_123", "uploads")
+
+val results = content.search("red bicycle")
+```
+
+No scoped option accepts a second collection or stream value. The facade owns
+no `CoroutineScope`, Android lifecycle, worker, or UI state.
 
 `Client.coroutines()` returns a lightweight `CoroutineClient` over the same
 configured client:

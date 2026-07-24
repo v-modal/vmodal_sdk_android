@@ -1,4 +1,27 @@
-# VModal Android upload guide
+# VModal Android scoped content guide
+
+For new content integrations, configure one developer project and create an
+immutable collection/stream scope:
+
+```kotlin
+import com.vmodal.sdk.VModal
+
+val content = VModal.configure(
+    projectId = "food_app",
+    apiKey = apiKey,
+).scope(
+    collectionName = "user_123",
+    streamName = "uploads",
+)
+
+val upload = content.upload(source)
+val results = content.search("birthday dinner")
+```
+
+The SDK validates and maps the public project, collection, and stream names
+before transport. A scope can be shared by ViewModels and workers without
+mutable selection state. Existing `Client` resources remain available for
+authentication, administration, images, R2, and advanced compatibility calls.
 
 This guide starts with a working Android upload and then adds reliability and
 performance features one at a time. Complete the root [quick start](../README.md)
@@ -54,8 +77,8 @@ credentials supplied by their application backend.
 
 Keep these three rules in mind:
 
-1. Prefer `Client.coroutines()` for new Kotlin code. Use a worker thread only
-   for a remaining blocking SDK call.
+1. Prefer `VModal.configure(...).scope(...)` for scoped content operations and
+   `Client.coroutines()` for lower-level operations.
 2. Stream Android `content://` URIs; do not read a complete video into memory.
 3. Start with default upload settings. Add persistent resume or adaptive tuning
    only after the basic upload works.

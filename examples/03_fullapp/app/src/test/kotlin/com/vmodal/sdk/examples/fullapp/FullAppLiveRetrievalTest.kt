@@ -28,6 +28,7 @@ class FullAppLiveRetrievalTest {
         var uploaded = false
         var indexed = false
         var version = ""
+        var primary: Throwable? = null
 
         try {
             repo.configure(key)
@@ -53,18 +54,13 @@ class FullAppLiveRetrievalTest {
                 "signed image content is not a supported encoded image"
             }
             println("full-app live upload/index/blue retrieval passed for $group")
+        } catch (exc: Throwable) {
+            primary = exc
+            throw exc
         } finally {
-            if (indexed) {
-                sdk.indexes.deleteIndex(
-                    mode = "vid_file",
-                    groupName = group,
-                    version = version.ifBlank { "all" },
-                    modality = "vid_img_emb",
-                    confirm = true,
-                )
-            }
-            if (uploaded) {
-                sdk.collections.delete(group, "vid_file", scope = "all", confirm = true)
+            val cleanup = liveCleanup(sdk, group, uploaded, indexed, version)
+            if (cleanup != null) {
+                if (primary != null) primary.addSuppressed(cleanup) else throw cleanup
             }
         }
     }
@@ -108,6 +104,39 @@ class FullAppLiveRetrievalTest {
         val okStatus = setOf("success", "succeeded", "done", "completed", "ok")
         val failStatus = setOf("failed", "failure", "error", "cancelled", "canceled", "dead_letter")
     }
+}
+
+private fun liveCleanup(
+    sdk: Client,
+    group: String,
+    uploaded: Boolean,
+    indexed: Boolean,
+    version: String,
+): Throwable? {
+    var first: Throwable? = null
+    if (indexed) {
+        try {
+            sdk.indexes.deleteIndex(
+                mode = "vid_file",
+                groupName = group,
+                version = version.ifBlank { "all" },
+                modality = "vid_img_emb",
+                confirm = true,
+            )
+        } catch (exc: Throwable) {
+            if (exc !is com.vmodal.sdk.ApiError || exc.statusCode != 404) first = exc
+        }
+    }
+    if (uploaded) {
+        try {
+            sdk.collections.delete(group, "vid_file", scope = "all", confirm = true)
+        } catch (exc: Throwable) {
+            if (exc !is com.vmodal.sdk.ApiError || exc.statusCode != 404) {
+                if (first == null) first = exc else first.addSuppressed(exc)
+            }
+        }
+    }
+    return first
 }
 
 private fun strEncodedImageKind(value: ByteArray): String? = when {

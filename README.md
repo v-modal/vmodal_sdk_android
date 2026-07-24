@@ -1,55 +1,4 @@
-
-
-<div align="center">
-  <img src="assets/vmodal-logo.svg" alt="VModal" width="88">
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="assets/android-original.svg" alt="Android" width="88">
-  <h1>VModal for Android</h1>
-  <p><strong>Give your Android app a multimodal memory.</strong></p>
-  <p>Upload video. Find moments by meaning, speech, text, or imagery.<br>Build the experience in Kotlin, Compose, Views, coroutines, and the Android tools you already know.</p>
-  <img src="https://img.shields.io/badge/Android-native-3DDC84?logo=android&logoColor=white" alt="Android native">
-  <img src="https://img.shields.io/badge/Kotlin-1.9%2B-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin 1.9+">
-  <img src="https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white" alt="Java 17">
-  <img src="https://img.shields.io/badge/Gradle-8.6-02303A?logo=gradle&logoColor=white" alt="Gradle 8.6">
-  <img src="https://img.shields.io/badge/license-Apache%202.0-6C63FF" alt="Apache License 2.0">
-  <a href="https://github.com/arita37/vmx_api/actions/workflows/sdk_android_ci.yml"><img src="https://github.com/arita37/vmx_api/actions/workflows/sdk_android_ci.yml/badge.svg?branch=dev" alt="Android SDK CI"></a>
-</div>
-
-<br>
-
-<img src="assets/dev_homepage.jpg" alt="A wall of searchable video moments and developer screens" width="100%">
-
-<p align="center"><em>Turn every video library into an experience Android users can explore.</em></p>
-
-## Build the feature people remember
-
-VModal brings multimodal video search and mobile-friendly uploads to Kotlin with a small, typed API. Your app owns the screens and lifecycle; the SDK handles the gateway, request models, response parsing, signed upload streams, progress, and cancellation.
-
-| Your Android experience | VModal gives you |
-|---|---|
-| “Find the red car entering the parking lot” | Semantic video and image search |
-| Search words spoken or shown on screen | ASR and OCR search sources |
-| Upload from the system photo picker | Streaming `content://` URI support |
-| A cancel action that really cancels | Cold upload Flow plus callback `UploadHandle` compatibility |
-| Compose, Views, or your own design system | A UI-free Kotlin client |
-| Existing authentication and DI | App-owned runtime credentials—no login UI imposed |
-| Work that survives beyond one screen | `CoroutineWorker` plus cancellation-aware upload Flow |
-
-Start with the [Android integration cookbook](docs/android_integration_cookbook.md)
-for the capability map, one coupled upload → index → search recipe, Compose and
-classic lifecycle patterns, `content://`, WorkManager, typed failures, and
-account-switch cleanup. Demo UI remains application-owned: the SDK publishes no
-navigation, screens, themes, accessibility policy, or design system.
-
-> [!TIP]
-> **Building a mobile video experience?** [Get a free beta API key](https://v-modal.com/page/contact.ts) and join the [VModal Discord](https://discord.gg/CRNsdJHg6). 
-
-[SDK docs: v-modal.github.io/vmodal_sdk_android/](https://v-modal.github.io/vmodal_sdk_android/)
-    
-We would love to help you ship it.
-
-
-## Prompt for AI Coding
+## Prompt to start
 
 ```text
 Set up and validate the Android application in
@@ -105,6 +54,55 @@ changed, validation results, and any device or platform check that could not be
 run with the exact blocker. Do not claim a live API flow passed unless it was
 tested with a valid runtime key.
 ```
+
+<div align="center">
+  <img src="assets/vmodal-logo.svg" alt="VModal" width="88">
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/android-original.svg" alt="Android" width="88">
+  <h1>VModal for Android</h1>
+  <p><strong>Give your Android app a multimodal memory.</strong></p>
+  <p>Upload video. Find moments by meaning, speech, text, or imagery.<br>Build the experience in Kotlin, Compose, Views, coroutines, and the Android tools you already know.</p>
+  <img src="https://img.shields.io/badge/Android-native-3DDC84?logo=android&logoColor=white" alt="Android native">
+  <img src="https://img.shields.io/badge/Kotlin-1.9%2B-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin 1.9+">
+  <img src="https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white" alt="Java 17">
+  <img src="https://img.shields.io/badge/Gradle-8.6-02303A?logo=gradle&logoColor=white" alt="Gradle 8.6">
+  <img src="https://img.shields.io/badge/license-Apache%202.0-6C63FF" alt="Apache License 2.0">
+  <a href="https://github.com/arita37/vmx_api/actions/workflows/sdk_android_ci.yml"><img src="https://github.com/arita37/vmx_api/actions/workflows/sdk_android_ci.yml/badge.svg?branch=dev" alt="Android SDK CI"></a>
+</div>
+
+<br>
+
+<img src="assets/dev_homepage.jpg" alt="A wall of searchable video moments and developer screens" width="100%">
+
+<p align="center"><em>Turn every video library into an experience Android users can explore.</em></p>
+
+## Build the feature people remember
+
+VModal brings multimodal video search and mobile-friendly uploads to Kotlin with a small, typed API. Your app owns the screens and lifecycle; the SDK handles the gateway, request models, response parsing, signed upload streams, progress, and cancellation.
+
+| Your Android experience | VModal gives you |
+|---|---|
+| “Find the red car entering the parking lot” | Semantic video and image search |
+| Search words spoken or shown on screen | ASR and OCR search sources |
+| Upload from the system photo picker | Streaming `content://` URI support |
+| A cancel action that really cancels | Cold upload Flow plus callback `UploadHandle` compatibility |
+| Compose, Views, or your own design system | A UI-free Kotlin client |
+| Existing authentication and DI | App-owned runtime credentials—no login UI imposed |
+| Work that survives beyond one screen | `CoroutineWorker` plus cancellation-aware upload Flow |
+
+Start with the [Android integration cookbook](docs/android_integration_cookbook.md)
+for the capability map, one coupled upload → index → search recipe, Compose and
+classic lifecycle patterns, `content://`, WorkManager, typed failures, and
+account-switch cleanup. Demo UI remains application-owned: the SDK publishes no
+navigation, screens, themes, accessibility policy, or design system.
+
+> [!TIP]
+> **Building a mobile video experience?** [Get a free beta API key](https://v-modal.com/page/contact.ts) and join the [VModal Discord](https://discord.gg/CRNsdJHg6). 
+
+[SDK docs: v-modal.github.io/vmodal_sdk_android/](https://v-modal.github.io/vmodal_sdk_android/)
+    
+We would love to help you ship it.
+
 ## Kotlin SDK reference
 
 Browse the generated [Kotlin SDK reference](https://v-modal.github.io/vmodal_sdk_android/) for public
@@ -120,6 +118,26 @@ failure, retry, timing, and signed-upload events—including a small Android Log
 uploaded bytes, raw URLs, credentials, headers, bodies, and exception messages never reach the sink.
 
 ## Start in minutes
+
+For new content flows, the preferred API binds every upload, search, asset,
+index, and deletion call to one immutable project/collection/stream scope:
+
+```kotlin
+import com.vmodal.sdk.VModal
+
+val content = VModal.configure(
+    projectId = "food_app",
+    apiKey = apiKeyLoadedByYourApp,
+).scope(
+    collectionName = "user_123",
+    streamName = "uploads",
+)
+
+val results = content.search("the cyclist crossing the bridge at sunset")
+```
+
+Use the lower-level `Client` API for authentication, administration, images,
+R2, and advanced operations not yet represented by the scoped facade.
 
 ### 1. Add the SDK
 
