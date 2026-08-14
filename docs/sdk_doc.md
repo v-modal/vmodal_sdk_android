@@ -38,6 +38,50 @@ cleanup, start with the [Android integration cookbook](android_integration_cookb
 The consuming application owns UI state, navigation, accessibility, theming,
 and its design system.
 
+## SDK API surface List
+
+Choose the smallest public surface that matches the integration:
+
+| SDK surface | Entry point | Use it for |
+|---|---|---|
+| Scoped content facade | `VModal.configure(...).scope(...)` | New upload, metadata, search, asset, index, and collection flows where project, collection, and stream must stay coupled |
+| Coroutine resources | `Client.coroutines()` | Authentication, administration, images, R2, and lower-level content operations from a caller-owned coroutine scope |
+| Blocking resources | `Client(...)`, `Client.fromEnv(...)` | Existing Java, worker-thread, command-line, and compatibility integrations |
+| Callback uploads | `videoUploadAsync(...)`, `videoUploadBulkAsync(...)` | Existing callback code that needs an `UploadHandle` for cancellation |
+| Extension and test contracts | `VmodalTransport`, `SignedUploadTransport`, `VmodalHttp`, `VmodalFilePart`, `VmodalJson` | Injected transports, deterministic tests, and custom trusted integrations |
+
+The scoped content facade is the preferred surface for new Android content
+features:
+
+- `VModal.configure(...)` creates an immutable `VModalProject`.
+- `VModalProject.scope(collectionName, streamName)` creates an immutable
+  `VModalScope`.
+- `VModalProject.listCollections(...)` lists decoded collections belonging to
+  that project.
+- `VModalScope` provides `upload`, `uploadEvents`, `uploadMetadata`, `search`,
+  `addAssets`, `updateAsset`, `createIndex`, `listIndexJobs`, `indexStatus`,
+  `deleteIndex`, and `deleteCollection`.
+
+The coroutine and blocking client surfaces expose the same primary resource
+families:
+
+| Resource | Coroutine surface | Blocking surface | Responsibility |
+|---|---|---|---|
+| Authentication | `CoroutineClient.auth` | `Client.auth` | Identity, authentication checks, and health |
+| Collections | `CoroutineClient.collections` | `Client.collections` | Collection discovery, mutation, metadata, and uploads |
+| Search | `CoroutineClient.searches` | `Client.searches` | Typed multimodal search |
+| Indexes | `CoroutineClient.indexes` | `Client.indexes` | Index creation, status, listing, and deletion |
+| Images | `CoroutineClient.images` | `Client.images` | Signed image URLs and bounded image retrieval |
+| Administration | `CoroutineClient.admin` | `Client.admin` | Usage and administrative reporting |
+| Object storage | `CoroutineClient.r2` | `Client.r2` | Low-level signed object-storage operations |
+
+`Client.gdrive` and `Client.sql` remain blocking compatibility placeholders.
+They fail locally with `FeatureDisabled` and are not active service surfaces.
+All surfaces share the typed request/response models and the `SdkError`
+hierarchy. The coroutine facade owns no lifecycle scope; the application calls
+it from `viewModelScope`, `lifecycleScope`, an application-owned scope, or
+`CoroutineWorker`.
+
 ## Runtime security contract
 
 Ordinary API requests automatically retry only `GET` and `HEAD`, for recognized

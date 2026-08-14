@@ -151,8 +151,16 @@ val deterministicTests = listOf(
     Triple("diagnosticsRegressionTest", "DiagnosticsRegressionTest.kt", "com.vmodal.sdk.DiagnosticsRegressionTestKt"),
 )
 
-deterministicTests.forEach { (taskName, fileName, className) ->
-    if (file("src/test/kotlin/com/vmodal/sdk/$fileName").isFile) {
+val deterministicTestDir = file("src/test/kotlin/com/vmodal/sdk")
+val publicSource = file(".vmodal-public-source").isFile
+check(publicSource || deterministicTestDir.isDirectory) {
+    "Required deterministic SDK test source directory is missing"
+}
+if (deterministicTestDir.isDirectory) {
+    deterministicTests.forEach { (taskName, fileName, className) ->
+        check(file("src/test/kotlin/com/vmodal/sdk/$fileName").isFile) {
+            "Required deterministic SDK test source is missing: $fileName"
+        }
         tasks.register<JavaExec>(taskName) {
             dependsOn(tasks.testClasses)
             if (taskName == "compatibilityBaselineTest") {
@@ -165,7 +173,10 @@ deterministicTests.forEach { (taskName, fileName, className) ->
             classpath = sourceSets.test.get().runtimeClasspath
             mainClass.set(className)
         }
-        tasks.test { dependsOn(taskName) }
+    }
+
+    tasks.test {
+        dependsOn(deterministicTests.map { it.first })
     }
 }
 
@@ -196,8 +207,6 @@ tasks.register<Exec>("cookbookCheck") {
         ":compileDebugKotlin",
     )
 }
-
-tasks.test { enabled = false }
 
 if (file("src/sim/kotlin/com/vmodal/sdk/SimApp.kt").isFile) {
     tasks.register<JavaExec>("runSim") {

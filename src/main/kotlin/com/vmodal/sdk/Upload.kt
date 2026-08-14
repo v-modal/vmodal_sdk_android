@@ -108,6 +108,7 @@ data class SignedUploadResult(
 class UploadHandle internal constructor() {
     private val canceled = AtomicBoolean(false)
     private val calls = CopyOnWriteArrayList<Call>()
+    private val requests = CopyOnWriteArrayList<VmodalCancelHandle>()
 
     /** Whether cancellation has been requested. */
     val isCanceled: Boolean get() = canceled.get()
@@ -116,23 +117,40 @@ class UploadHandle internal constructor() {
     fun cancel() {
         canceled.set(true)
         calls.forEach { it.cancel() }
+        requests.forEach { it.cancel() }
         calls.clear()
+        requests.clear()
     }
 
     internal fun add(call: Call) {
         calls += call
-        if (isCanceled) call.cancel()
+        if (isCanceled) {
+            call.cancel()
+            calls -= call
+        }
     }
 
     internal fun remove(call: Call) {
         calls -= call
     }
 
+    internal fun add(request: VmodalCancelHandle) {
+        requests += request
+        if (isCanceled) {
+            request.cancel()
+            requests -= request
+        }
+    }
+
+    internal fun remove(request: VmodalCancelHandle) {
+        requests -= request
+    }
+
     internal fun ensureActive() {
         if (isCanceled) throw ApiError("upload canceled")
     }
 
-    internal val activeCallCount: Int get() = calls.size
+    internal val activeCallCount: Int get() = calls.size + requests.size
 }
 
 /** Injectable asynchronous byte transport for pre-authorized upload locations. */

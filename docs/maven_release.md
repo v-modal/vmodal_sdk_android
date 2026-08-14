@@ -213,6 +213,10 @@ consumer; and tests/builds both demos without live credentials.
    `publish_sdk_docs_only=true`; this skips SDK tests, live tests, source export,
    and Maven publication while retaining secret detection, Dokka generation,
    endpoint-free validation, and immutable artifact checks.
+   The public source export intentionally excludes the internal `src/test`,
+   `src/live`, and `src/sim` trees and adds `.vmodal-public-source`. That marker
+   is the only supported way to configure without the deterministic test tree;
+   the exported Gradle build must still build the production SDK and consumer.
 5. Download the published coordinate in a clean consumer with no local Maven
    cache. Verify signature, checksum, POM, version, license, and compilation.
 6. Confirm the public tag/export mapping and inspect audit logs. Revoke any

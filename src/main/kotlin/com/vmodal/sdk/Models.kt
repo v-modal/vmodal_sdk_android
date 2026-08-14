@@ -521,17 +521,17 @@ class IndexationJobsListResponse(raw: Map<String, Any?>) : JsonBackedResponse(ra
 /** Index job creation result. */
 class IndexationSubmitResponse(raw: Map<String, Any?>) : JsonBackedResponse(raw) {
     /** Created job identifier. */
-    val jobId: String = raw["job_id"]?.toString().orEmpty()
+    val jobId: String = strResponseRequired(raw["job_id"], "job_id")
     /** Initial job status. */
-    val status: String = raw["status"]?.toString().orEmpty()
+    val status: String = strResponseRequired(raw["status"], "status")
 }
 
 /** Current index job state. */
 class IndexationStatusResponse(raw: Map<String, Any?>) : JsonBackedResponse(raw) {
     /** Index job identifier. */
-    val jobId: String = raw["job_id"]?.toString().orEmpty()
+    val jobId: String = strResponseRequired(raw["job_id"], "job_id")
     /** Current job status. */
-    val status: String = raw["status"]?.toString().orEmpty()
+    val status: String = strResponseRequired(raw["status"], "status")
 }
 
 /** Index deletion result. */
@@ -701,6 +701,12 @@ internal fun Any?.asDouble(): Double = when (this) {
 internal fun strRequired(value: String, fieldName: String): String {
     val clean = value.trim()
     if (clean.isBlank()) throw ValidationFailed("$fieldName is required")
+    return clean
+}
+
+private fun strResponseRequired(value: Any?, fieldName: String): String {
+    val clean = value?.toString()?.trim().orEmpty()
+    if (clean.isBlank()) throw MalformedResponse("response field '$fieldName' is required")
     return clean
 }
 

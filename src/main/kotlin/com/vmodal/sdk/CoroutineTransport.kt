@@ -2,6 +2,8 @@ package com.vmodal.sdk
 
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -27,6 +29,50 @@ interface VmodalTransportCallback {
 interface CancellableVmodalTransport : VmodalTransport {
     /** Starts [request] and returns a handle that cancels its underlying call. */
     fun executeAsync(request: VmodalRequest, callback: VmodalTransportCallback): VmodalCancelHandle
+}
+
+/** Executes one upload gateway request while linking its transport call to [uploadHandle]. */
+internal fun VmodalTransport.executeWithHandle(
+    request: VmodalRequest,
+    uploadHandle: UploadHandle,
+): VmodalResponse {
+    uploadHandle.ensureActive()
+    if (this !is CancellableVmodalTransport) {
+        return execute(request).also { uploadHandle.ensureActive() }
+    }
+
+    val done = AtomicBoolean(false)
+    val result = AtomicReference<VmodalResponse?>()
+    val failure = AtomicReference<Throwable?>()
+    val requestHandle = AtomicReference<VmodalCancelHandle?>()
+    val latch = CountDownLatch(1)
+    val callback = object : VmodalTransportCallback {
+        override fun onSuccess(response: VmodalResponse) {
+            if (done.compareAndSet(false, true)) {
+                result.set(response)
+                latch.countDown()
+            }
+        }
+
+        override fun onFailure(error: Throwable) {
+            if (done.compareAndSet(false, true)) {
+                failure.set(error)
+                latch.countDown()
+            }
+        }
+    }
+    try {
+        val active = executeAsync(request, callback)
+        requestHandle.set(active)
+        uploadHandle.add(active)
+        if (done.get()) uploadHandle.remove(active)
+        while (!latch.await(50, TimeUnit.MILLISECONDS)) uploadHandle.ensureActive()
+        uploadHandle.ensureActive()
+        failure.get()?.let { throw it }
+        return result.get() ?: throw ApiError("gateway request returned no result")
+    } finally {
+        requestHandle.get()?.let(uploadHandle::remove)
+    }
 }
 
 /** Executes cancellable transports natively and legacy transports on [fallbackDispatcher]. */

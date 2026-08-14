@@ -78,8 +78,8 @@ class OkHttpTransport private constructor(
             if (done.compareAndSet(false, true)) callback.onFailure(error)
         }
         call.enqueue(object : Callback {
-            override fun onFailure(call: Call, error: java.io.IOException) {
-                fail(if (call.isCanceled()) CancellationException("HTTP request cancelled") else error)
+            override fun onFailure(call: Call, e: java.io.IOException) {
+                fail(if (call.isCanceled()) CancellationException("HTTP request cancelled") else e)
             }
 
             override fun onResponse(call: Call, response: Response) {

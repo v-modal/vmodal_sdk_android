@@ -79,9 +79,8 @@ fun CollectionsResource.videoUploadAsync(
     val resolved = options.resolvedFor(source.contentLength)
     resolved.validate(source.contentLength)
     val handle = UploadHandle()
-    // Signing/finalization use the regular SDK transport, which may block. Moving the whole
-    // orchestration off the UI thread keeps the API Android-safe; every R2 body itself is still
-    // sent through OkHttp.enqueue and remains cancelable through this handle.
+    // The orchestration runs off the UI thread and links every cancellable gateway and signed
+    // storage request to the same operation handle.
     uploadExecutor.execute {
         try {
             val result = videoUploadRun(source, collectionName, subCollectionName, mode, modality, ttl, resolved, handle, onProgress)
@@ -192,9 +191,14 @@ private fun CollectionsResource.singleUpload(
     handle: UploadHandle,
     onProgress: (UploadProgress) -> Unit,
 ): VideoUploadResponse {
-    val signed = http.request("POST", Routes.full(Routes.externalUploadGetSignedUrl), params = uploadParams(source, collectionName, subCollectionName, mode, modality, ttl))
+    val signed = http.requestUpload(
+        "POST",
+        Routes.full(Routes.externalUploadGetSignedUrl),
+        handle,
+        params = uploadParams(source, collectionName, subCollectionName, mode, modality, ttl),
+    )
     val result = uploadAwait(source, signed["url"]?.toString().orEmpty(), signed["method"]?.toString() ?: "PUT", handle = handle, onProgress = onProgress)
-    val done = uploadDone(signed["key"]?.toString().orEmpty(), source, collectionName, subCollectionName, mode, modality)
+    val done = uploadDone(signed["key"]?.toString().orEmpty(), source, collectionName, subCollectionName, mode, modality, handle)
     val raw = linkedMapOf<String, Any?>().apply {
         putAll(signed)
         put("filename", source.fileName)
@@ -245,33 +249,33 @@ private fun CollectionsResource.multipartUploadLocked(
     handle.ensureActive()
     val stored = options.sessionStore.load(sessionKey)?.let(MultipartSession::fromMap)
     if (!options.resume && stored != null) {
-        multipartAbort(stored)
+        multipartAbort(stored, handle)
         options.sessionStore.remove(sessionKey)
     }
     var active = if (options.resume) stored else null
     var resumed = active != null
     if (active == null) {
-        active = multipartCreate(source, collectionName, subCollectionName, mode, modality, options)
+        active = multipartCreate(source, collectionName, subCollectionName, mode, modality, options, handle)
         options.sessionStore.save(sessionKey, active.toMap())
     }
 
     handle.ensureActive()
     var status = try {
-        multipartStatus(active)
+        multipartStatus(active, handle)
     } catch (exc: ApiError) {
         if (exc.statusCode != 404) throw exc
         options.sessionStore.remove(sessionKey)
-        active = multipartCreate(source, collectionName, subCollectionName, mode, modality, options)
+        active = multipartCreate(source, collectionName, subCollectionName, mode, modality, options, handle)
         options.sessionStore.save(sessionKey, active.toMap())
         resumed = false
-        multipartStatus(active)
+        multipartStatus(active, handle)
     }
     if (status["status"]?.toString() == "completed") {
         if (status["size_bytes"].asLong() != source.contentLength || status["etag"]?.toString().orEmpty().isBlank()) {
             throw ApiError("completed multipart status does not match local upload contract")
         }
         handle.ensureActive()
-        val done = uploadDone(active.key, source, collectionName, subCollectionName, mode, modality)
+        val done = uploadDone(active.key, source, collectionName, subCollectionName, mode, modality, handle)
         options.sessionStore.remove(sessionKey)
         return multipartResponse(source, active, status["etag"]?.toString().orEmpty(), resumed = resumed, attempts = 0, done = done)
     }
@@ -312,7 +316,7 @@ private fun CollectionsResource.multipartUploadLocked(
     try {
         missing.chunked(minOf(32, options.maxConcurrency * 2)).forEach { batch ->
             handle.ensureActive()
-            val signedParts = multipartSign(active, batch, ttl)["parts"].asObjectList()
+            val signedParts = multipartSign(active, batch, ttl, handle)["parts"].asObjectList()
             val signed = signedParts.associateBy { it["part_number"].asInt() }
             if (signedParts.size != batch.size || signed.keys != batch.toSet()) {
                 throw ApiError("multipart sign response did not match requested parts")
@@ -345,9 +349,9 @@ private fun CollectionsResource.multipartUploadLocked(
     }
 
     handle.ensureActive()
-    status = multipartStatus(active)
+    status = multipartStatus(active, handle)
     val parts = multipartFinalParts(active, source.contentLength, status)
-    val complete = http.request("POST", Routes.full(Routes.externalUploadMultipartComplete), json = mapOf(
+    val complete = http.requestUpload("POST", Routes.full(Routes.externalUploadMultipartComplete), handle, json = mapOf(
         "request_id" to active.requestId,
         "upload_id" to active.uploadId,
         "key" to active.key,
@@ -357,7 +361,7 @@ private fun CollectionsResource.multipartUploadLocked(
     val etag = complete["etag"]?.toString().orEmpty()
     if (etag.isBlank()) throw ApiError("multipart complete response returned no ETag")
     handle.ensureActive()
-    val done = uploadDone(active.key, source, collectionName, subCollectionName, mode, modality)
+    val done = uploadDone(active.key, source, collectionName, subCollectionName, mode, modality, handle)
     options.sessionStore.remove(sessionKey)
     sentByPart.keys.forEach { sentByPart[it] = partLength(source.contentLength, active.partSize, it) }
     lastProgress = source.contentLength
@@ -372,9 +376,10 @@ private fun CollectionsResource.multipartCreate(
     mode: String,
     modality: String,
     options: VideoUploadOptions,
+    handle: UploadHandle,
 ): MultipartSession {
     val requestId = UUID.randomUUID().toString()
-    val create = http.request("POST", Routes.full(Routes.externalUploadMultipartCreate), json = mapOf(
+    val create = http.requestUpload("POST", Routes.full(Routes.externalUploadMultipartCreate), handle, json = mapOf(
         "request_id" to requestId,
         "mode" to mode,
         "group_name" to collection,
@@ -438,12 +443,12 @@ private fun CollectionsResource.multipartPutOne(
             handle.ensureActive()
             last = exc
             if (exc is SignedUploadFailure && exc.sentBytes == length && exc.localMd5.isNotBlank()) {
-                val found = multipartReconcilePart(session, number, length, exc.localMd5)
+                val found = multipartReconcilePart(session, number, length, exc.localMd5, handle)
                 if (found != null) return UploadedPart(number, found, length, exc.localMd5, idx + 1)
             }
             val retry = when {
                 exc is ApiError && exc.statusCode == 403 && idx + 1 < options.maxPartAttempts -> {
-                    val refreshed = multipartSign(session, listOf(number), ttl)["parts"].asObjectList()
+                    val refreshed = multipartSign(session, listOf(number), ttl, handle)["parts"].asObjectList()
                     if (refreshed.size != 1 || refreshed.single()["part_number"].asInt() != number) {
                         throw ApiError("multipart URL refresh returned no matching part")
                     }
@@ -466,12 +471,14 @@ private fun CollectionsResource.multipartReconcilePart(
     number: Int,
     length: Long,
     md5: String,
+    handle: UploadHandle,
 ): String? = try {
-    multipartStatus(session)["parts"].asObjectList().firstOrNull {
+    multipartStatus(session, handle)["parts"].asObjectList().firstOrNull {
         it["part_number"].asInt() == number && it["size_bytes"].asLong() == length &&
             it["etag"]?.toString().orEmpty().lowercase() == md5.lowercase()
     }?.get("etag")?.toString()
 } catch (_: ApiError) {
+    handle.ensureActive()
     null
 }
 
@@ -492,8 +499,8 @@ private fun multipartFinalParts(session: MultipartSession, size: Long, status: M
     }
 }
 
-private fun CollectionsResource.multipartAbort(session: MultipartSession) =
-    http.request("POST", Routes.full(Routes.externalUploadMultipartAbort), json = mapOf(
+private fun CollectionsResource.multipartAbort(session: MultipartSession, handle: UploadHandle) =
+    http.requestUpload("POST", Routes.full(Routes.externalUploadMultipartAbort), handle, json = mapOf(
         "request_id" to session.requestId, "upload_id" to session.uploadId, "key" to session.key,
     ))
 
@@ -522,16 +529,23 @@ private fun multipartResponse(
     "dest_path" to done["dest_path"]?.toString().orEmpty(),
 ))
 
-private fun CollectionsResource.uploadDone(key: String, source: UploadSource, collection: String, stream: String, mode: String, modality: String) =
-    http.request("POST", Routes.full(Routes.externalUploadDone), params = mapOf(
+private fun CollectionsResource.uploadDone(
+    key: String,
+    source: UploadSource,
+    collection: String,
+    stream: String,
+    mode: String,
+    modality: String,
+    handle: UploadHandle,
+) = http.requestUpload("POST", Routes.full(Routes.externalUploadDone), handle, params = mapOf(
         "key" to key, "mode" to mode, "group_name" to collection, "stream_name" to stream, "modality" to modality, "filename" to source.fileName,
     ))
 
-private fun CollectionsResource.multipartStatus(session: MultipartSession) =
-    http.request("GET", Routes.full(Routes.externalUploadMultipartStatus), params = mapOf("request_id" to session.requestId, "upload_id" to session.uploadId, "key" to session.key))
+private fun CollectionsResource.multipartStatus(session: MultipartSession, handle: UploadHandle) =
+    http.requestUpload("GET", Routes.full(Routes.externalUploadMultipartStatus), handle, params = mapOf("request_id" to session.requestId, "upload_id" to session.uploadId, "key" to session.key))
 
-private fun CollectionsResource.multipartSign(session: MultipartSession, numbers: List<Int>, ttl: Int) =
-    http.request("POST", Routes.full(Routes.externalUploadMultipartSignParts), json = mapOf(
+private fun CollectionsResource.multipartSign(session: MultipartSession, numbers: List<Int>, ttl: Int, handle: UploadHandle) =
+    http.requestUpload("POST", Routes.full(Routes.externalUploadMultipartSignParts), handle, json = mapOf(
         "request_id" to session.requestId, "upload_id" to session.uploadId, "key" to session.key, "part_numbers" to numbers, "ttl" to ttl,
     ))
 

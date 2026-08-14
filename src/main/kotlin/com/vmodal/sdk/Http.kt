@@ -46,6 +46,22 @@ class VmodalHttp(
         params: Map<String, Any?> = emptyMap(),
     ): Map<String, Any?> = execute(method, path, json, data, files, params, headers()).jsonObject()
 
+    /** Executes an upload gateway request linked to the operation-wide cancellation handle. */
+    internal fun requestUpload(
+        method: String,
+        path: String,
+        handle: UploadHandle,
+        json: Any? = null,
+        params: Map<String, Any?> = emptyMap(),
+    ): Map<String, Any?> = execute(
+        method,
+        path,
+        json,
+        params = params,
+        headers = headers(),
+        uploadHandle = handle,
+    ).jsonObject()
+
     /** Executes a bounded in-memory binary request. */
     fun requestBytes(
         method: String,
@@ -150,6 +166,7 @@ class VmodalHttp(
         headers: Map<String, String>,
         responseMode: VmodalResponseMode = VmodalResponseMode.TEXT,
         transportKind: DiagnosticTransportKind = DiagnosticTransportKind.GATEWAY,
+        uploadHandle: UploadHandle? = null,
     ): VmodalResponse {
         val request = prepareRequest(method, path, json, data, files, params, headers, responseMode)
         val attempts = attemptCount(request.method)
@@ -162,6 +179,7 @@ class VmodalHttp(
         }
         var last: IOException? = null
         repeat(attempts) { idx ->
+            uploadHandle?.ensureActive()
             var terminal = false
             val item = metadata?.let {
                 diagnostics.startAttempt(
@@ -174,11 +192,11 @@ class VmodalHttp(
                 )
             }
             try {
-                val res = transport.execute(request)
+                val res = uploadHandle?.let { transport.executeWithHandle(request, it) } ?: transport.execute(request)
                 if (shouldRetry(request.method, res.statusCode, idx, attempts)) {
                     diagnostics.failure(item, ApiError("api request failed", statusCode = res.statusCode))
                     terminal = true
-                    retrySleep(idx)
+                    retrySleep(idx, uploadHandle)
                     return@repeat
                 }
                 val checked = responseOrThrow(res)
@@ -196,7 +214,7 @@ class VmodalHttp(
                 if (!terminal) diagnostics.failure(item, exc)
                 last = exc
                 if (hasNextAttempt(idx, attempts)) {
-                    retrySleep(idx)
+                    retrySleep(idx, uploadHandle)
                     return@repeat
                 }
                 throw TransportError(exc)
@@ -318,9 +336,15 @@ class VmodalHttp(
         }
     }
 
-    private fun retrySleep(idx: Int) {
+    private fun retrySleep(idx: Int, uploadHandle: UploadHandle? = null) {
         try {
-            Thread.sleep(retryDelayMillis(idx))
+            var left = retryDelayMillis(idx)
+            while (left > 0) {
+                uploadHandle?.ensureActive()
+                val wait = minOf(50L, left)
+                Thread.sleep(wait)
+                left -= wait
+            }
         } catch (exc: InterruptedException) {
             Thread.currentThread().interrupt()
             throw ApiError("request interrupted").also { it.initCause(exc) }
