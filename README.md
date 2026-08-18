@@ -4,7 +4,7 @@
   &nbsp;&nbsp;&nbsp;&nbsp;
   <img src="assets/android-original.svg" alt="Android" width="88">
   <h1>VModal for Android</h1>
-  <p><strong>Give your Android app a multimodal memory.</strong></p>
+  <p><strong>Give your Android app a Visual Memory (Video, Audio,..)</strong></p>
   <p>Upload video. Find moments by meaning, speech, text, or imagery.<br>Build the experience in Kotlin, Compose, Views, coroutines, and the Android tools you already know.</p>
   <img src="https://img.shields.io/badge/Android-native-3DDC84?logo=android&logoColor=white" alt="Android native">
   <img src="https://img.shields.io/badge/Kotlin-1.9%2B-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin 1.9+">
@@ -12,6 +12,9 @@
   <img src="https://img.shields.io/badge/Gradle-8.6-02303A?logo=gradle&logoColor=white" alt="Gradle 8.6">
   <img src="https://img.shields.io/badge/license-Apache%202.0-6C63FF" alt="Apache License 2.0">
   <a href="https://github.com/arita37/vmx_api/actions/workflows/sdk_android_ci.yml"><img src="https://github.com/arita37/vmx_api/actions/workflows/sdk_android_ci.yml/badge.svg?branch=dev" alt="Android SDK CI"></a>
+
+
+
 </div>
 
 <br>
@@ -20,10 +23,14 @@
 
 <p align="center"><em>Turn every video library into an experience Android users can explore.</em></p>
 
+<p>[V-Modal AI Discord](https://discord.gg/CRNsdJHg6)</p>
+<p>[V-Modal AI Website](https://www.v-modal.com/developers)</p>
+
+
 <details>
 <summary><strong>Build the feature people remember</strong></summary>
 
-VModal brings multimodal video search and mobile-friendly uploads to Kotlin with a small, typed API. Your app owns the screens and lifecycle; the SDK handles the gateway, request models, response parsing, signed upload streams, progress, and cancellation.
+V-Modal AI brings multimodal video search and mobile-friendly uploads to Kotlin with a small, typed API. Your app owns the screens and lifecycle; the SDK handles the gateway, request models, response parsing, signed upload streams, progress, and cancellation.
 
 | Your Android experience | VModal gives you |
 |---|---|
