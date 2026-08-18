@@ -23,7 +23,7 @@
 
 <p align="center"><em>Turn every video library into an experience Android users can explore.</em></p>
 
-[V-Modal AI Discord](https://discord.gg/CRNsdJHg6)
+[V-Modal AI Discord](https://discord.gg/CRNsdJHg6) <br>
 [V-Modal AI Website](https://www.v-modal.com/developers)
 
 
