@@ -3,7 +3,7 @@
   <img src="assets/vmodal-logo.svg" alt="VModal" width="88">
   &nbsp;&nbsp;&nbsp;&nbsp;
   <img src="assets/android-original.svg" alt="Android" width="88">
-  <h1>VModal for Android</h1>
+  <h1>V-Modal AI for Android</h1>
   <p><strong>Give your Android app a Visual Memory (Video, Audio,..)</strong></p>
   <p>Upload video. Find moments by meaning, speech, text, or imagery.<br>Build the experience in Kotlin, Compose, Views, coroutines, and the Android tools you already know.</p>
   <img src="https://img.shields.io/badge/Android-native-3DDC84?logo=android&logoColor=white" alt="Android native">
