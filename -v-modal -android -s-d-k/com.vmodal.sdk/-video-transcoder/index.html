@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>VideoTranscoder</title>
+    <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">
+        <script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async="async"></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer="defer"></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async="async"></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer="defer"></script>
+</head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+            <a class="library-name--link" href="../../../index.html" tabindex="1">
+                    VModal Android SDK
+            </a>
+        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle"
+                type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+2.0.0        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true"
+                        data-filter=":/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox"
+                        data-role="dropdown-toggle"
+                        aria-controls="platform-tags-listbox"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        aria-label="Toggle source sets"
+                ></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":/main"
+                                       data-filter=":/main"/>
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button"
+                    type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config='{"defaultSize": 280, "minSize": 200, "maxSize": 400}'>
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list"
+                    data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    VModal Android SDK
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageIds="VModal Android SDK::com.vmodal.sdk/VideoTranscoder///PointingToDeclaration//-251573632">
+  <div class="breadcrumbs"><a href="../../../index.html">VModal Android SDK</a><span class="delimiter">/</span><a href="../index.html">com.vmodal.sdk</a><span class="delimiter">/</span><span class="current">VideoTranscoder</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Video</span><wbr></wbr><span><span>Transcoder</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">interface </span><a href="index.html">VideoTranscoder</a></div><p class="paragraph">Pluggable pre-upload video transcoder.</p><p class="paragraph">The core SDK is a pure-JVM library and intentionally has no Android framework dependency, so the real device transcoder (for example <code class="lang-kotlin">androidx.media3.transformer</code>) is supplied by the app rather than bundled here. The default <a href="../-passthrough-transcoder/index.html">PassthroughTranscoder</a> performs no transcoding. An app that wants to shrink a clip (for example to a 360px longer side) injects its own implementation through <a href="../-video-upload-options/transcoder.html">VideoUploadOptions.transcoder</a>.</p><h2 class="">How to inject a transcoder</h2><p class="paragraph">Transcoding is opt-in and per-upload. The default is no transcoding, so existing callers are unaffected. To reduce resolution before upload, set <a href="../-video-upload-options/transcoder.html">VideoUploadOptions.transcoder</a> to your implementation and pass a <strong>file-backed</strong> source (<a href="../-upload-source/-companion/from-file.html">UploadSource.fromFile</a>); a stream-only source with a non-passthrough transcoder raises <a href="../-validation-failed/index.html">ValidationFailed</a>.</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">// 1. Add the Media3 dependency in the APP module (not the SDK core):<br>//    implementation(&quot;androidx.media3:media3-transformer:&lt;version&gt;&quot;)<br>//    implementation(&quot;androidx.media3:media3-effect:&lt;version&gt;&quot;)<br>//    implementation(&quot;androidx.media3:media3-common:&lt;version&gt;&quot;)<br><br>// 2. Provide a device transcoder that scales the longer side to 360px and writes to the cache:<br>import android.content.Context<br>import androidx.media3.common.MediaItem<br>import androidx.media3.effect.Presentation<br>import androidx.media3.transformer.Composition<br>import androidx.media3.transformer.EditedMediaItem<br>import androidx.media3.transformer.Effects<br>import androidx.media3.transformer.ExportException<br>import androidx.media3.transformer.ExportResult<br>import androidx.media3.transformer.Transformer<br>import com.vmodal.sdk.TranscodeResult<br>import com.vmodal.sdk.VideoTranscoder<br>import java.io.File<br>import java.util.concurrent.CountDownLatch<br>import java.util.concurrent.atomic.AtomicReference<br><br>class Media3TransformerTranscoder(private val context: Context) : VideoTranscoder {<br>    override fun reduce(input: File): TranscodeResult {<br>        val out = File(context.cacheDir, &quot;vmodal_reduced_${'$'}{input.name}&quot;)<br>        // Reuse a prior reduction to skip re-encoding the same clip.<br>        if (out.isFile &amp;&amp; out.length() &gt; 0) return TranscodeResult(out, reused = true)<br><br>        val edited = EditedMediaItem.Builder(MediaItem.fromUri(input.toURI().toString()))<br>            .setEffects(Effects(emptyList(), listOf(Presentation.createForHeight(360))))<br>            .build()<br>        val error = AtomicReference&lt;Exception&gt;()<br>        val latch = CountDownLatch(1)<br>        val transformer = Transformer.Builder(context)<br>            .addListener(object : Transformer.Listener {<br>                override fun onCompleted(c: Composition, r: ExportResult) = latch.countDown()<br>                override fun onError(c: Composition, r: ExportResult, e: ExportException) {<br>                    error.set(e); latch.countDown()<br>                }<br>            })<br>            .build()<br>        // Transformer.start() must be called on the main thread; dispatch this reduce() call<br>        // from a main-thread coroutine (for example withContext(Dispatchers.Main)).<br>        transformer.start(edited, out.absolutePath)<br>        latch.await()<br>        error.get()?.let { throw it }<br>        return TranscodeResult(out, reused = false)<br>    }<br>}<br><br>// 3. Inject it per upload (default stays &quot;no transcoding&quot;):<br>val options = VideoUploadOptions().apply { transcoder = Media3TransformerTranscoder(context) }<br>val response = sdk.collections.videoUpload(<br>    UploadSource.fromFile(file), &quot;collection&quot;, &quot;stream&quot;, options = options,<br>)<br>// response.reduceSize == true; response.sourceSizeBytes == original bytes;<br>// response.sizeBytes == uploaded (reduced) bytes; the produced temp is deleted afterward.</code></pre><span class="copy-tooltip"><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div><span class="copy-icon"></span></span></div><h2 class="">Implementation contract</h2><ul><li><p class="paragraph">Return a <strong>new</strong> file at a different path (a disposable temp, for example under <code class="lang-kotlin">context.cacheDir</code>) when you actually reduce the input. The upload lifecycle deletes that produced file after a successful upload; the app's original file is never touched.</p></li><li><p class="paragraph">Return the <strong>input file unchanged</strong> to pass through (no upload-side deletion happens).</p></li><li><p class="paragraph">Set <a href="../-transcode-result/reused.html">TranscodeResult.reused</a> to <code class="lang-kotlin">true</code> when you serve a previously cached reduction.</p></li><li><p class="paragraph">Do not use an ffmpeg CLI binary on Android: there is no system <code class="lang-kotlin">ffmpeg</code>, and app sandboxing blocks executing a bundled one. Prefer Media3 Transformer or <code class="lang-kotlin">MediaCodec</code>.</p></li></ul><h4 class="tableheader">Inheritors</h4><div class="table"><div class="table-row table-row_content" data-filterable-current=":/main" data-filterable-set=":/main"><div class="main-subrow keyValue "><div class=""><span class="inline-flex"><div><a href="../-passthrough-transcoder/index.html">PassthroughTranscoder</a></div></span></div><div></div></div></div></div></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="317513289%2FProperties%2F-251573632" anchor-label="isPassthrough" id="317513289%2FProperties%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="is-passthrough.html"><span>is</span><wbr></wbr><span><span>Passthrough</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="317513289%2FProperties%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">val </span><a href="is-passthrough.html">isPassthrough</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div><div class="brief "><p class="paragraph">True when <a href="reduce.html">reduce</a> always returns the input unchanged. Lets the lifecycle skip transcoding.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="1247010793%2FFunctions%2F-251573632" anchor-label="reduce" id="1247010793%2FFunctions%2F-251573632" data-filterable-set=":/main"></a>
+          <div class="table-row table-row_content" data-filterable-current=":/main" data-filterable-set=":/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="reduce.html"><span><span>reduce</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1247010793%2FFunctions%2F-251573632"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":/main"><div class="symbol monospace"><span class="token keyword">abstract </span><span class="token keyword">fun </span><a href="reduce.html"><span class="token function">reduce</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">input<span class="token operator">: </span><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/File.html">File</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-transcode-result/index.html">TranscodeResult</a></div><div class="brief "><p class="paragraph">Returns a reduced copy of <a href="reduce.html">input</a>, or <a href="reduce.html">input</a> itself to pass through unchanged.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
