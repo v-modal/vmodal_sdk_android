@@ -55,8 +55,8 @@ complete demo application.
 
 1. Download the GitHub repository:
 
-     git clone https://github.com/arita37/vmx_api.git
-     cd vmx_api
+     git clone https://github.com/v-modal/vmodal_sdk_android
+     cd vmodal_sdk_android
 
    If the repository already exists, reuse the current checkout and preserve
    unrelated local changes.
@@ -216,9 +216,24 @@ network behavior, the supported toolchain, and local validation.
 - [Build the complete upload → index → search experience](docs/search_app.md)
 - [Browse the API quick reference](DOC_REF.md)
 - [Browse the generated Kotlin reference](https://v-modal.github.io/vmodal_sdk_android/)
+- [VModal home](https://www.v-modal.com)
+- [VModal for developers](https://www.v-modal.com/developers)
+- [VModal AI](https://www.v-modal.ai)
 - [Open an issue](https://github.com/v-modal/vmodal_sdk_android/issues)
 
 </details>
+
+---
+
+## Learn More About VModal
+
+Explore the full platform and developer resources:
+
+* [VModal](https://www.v-modal.com) — the official home of VModal multimodal video and image search.
+* [VModal for Developers](https://www.v-modal.com/developers) — API docs, SDKs, and integration guides for building on VModal.
+* [VModal AI](https://www.v-modal.ai) — learn how VModal AI powers semantic search across video, speech, text, and imagery.
+
+Get started today at [www.v-modal.com](https://www.v-modal.com), read the [developer documentation](https://www.v-modal.com/developers), and discover the technology behind [VModal AI](https://www.v-modal.ai).
 
 ---
 
