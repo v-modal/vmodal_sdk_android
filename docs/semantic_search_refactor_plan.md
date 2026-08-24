@@ -78,6 +78,10 @@ overloads, scoped options, examples, documentation, and public API dumps.
 There must be no public or internal parameter that lets a caller replace the
 fixed compatibility value.
 
+The completed selector-removal contract is specified in
+[remove.md](todo/remove.md): index creation and deletion likewise use the
+private `vid_img_emb` image-embedding values.
+
 Do not include the fixed value in logs, errors, `toString()`, diagnostics, or
 generated documentation. Do not change the server default, schema, route, or
 deployment.

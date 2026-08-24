@@ -7,6 +7,22 @@ package com.vmodal.sdk
  */
 open class JsonBackedResponse(val raw: Map<String, Any?> = emptyMap())
 
+/** Fixed wire values for the supported image-embedding pipeline. */
+internal object ImageEmbeddingWire {
+    const val searchSource = "image"
+    const val indexType = "vid_img_emb"
+    const val modality = "vid_img_emb"
+
+    fun search(fields: Map<String, Any?>): Map<String, Any?> =
+        linkedMapOf<String, Any?>("search_sources" to listOf(searchSource)).apply { putAll(fields) }
+
+    fun index(fields: Map<String, Any?>): Map<String, Any?> =
+        linkedMapOf<String, Any?>("index_type" to indexType, "modality" to modality).apply { putAll(fields) }
+
+    fun deleteIndex(fields: Map<String, Any?>): Map<String, Any?> =
+        linkedMapOf<String, Any?>("modality" to modality).apply { putAll(fields) }
+}
+
 /** Forward-compatible search result item. */
 class SearchResultItem(raw: Map<String, Any?>) : JsonBackedResponse(raw)
 /** Typed collection group summary with version helpers. */
@@ -43,7 +59,7 @@ class IndexationJobItem(raw: Map<String, Any?>) : JsonBackedResponse(raw)
 class AdminUserStatItem(raw: Map<String, Any?>) : JsonBackedResponse(raw)
 
 /**
- * Validated multimodal search request and its optional filters.
+ * Validated image-semantic search request and its optional filters.
  *
  * @property queryText natural-language query
  * @property queryMetadata optional metadata filter
@@ -51,8 +67,6 @@ class AdminUserStatItem(raw: Map<String, Any?>) : JsonBackedResponse(raw)
  * @property mode collection mode
  * @property groupName collection group name
  * @property streamName stream name
- * @property searchSources modalities to search
- * @property searchCombineMode modality result combination mode
  * @property startDate optional inclusive start date
  * @property endDate optional inclusive end date
  * @property offset result offset
@@ -68,8 +82,6 @@ data class SearchRequest(
     val mode: String = "vid_file",
     val groupName: String = "agroup",
     val streamName: String = "astream",
-    val searchSources: List<String> = listOf("ocr", "asr", "image"),
-    val searchCombineMode: String = "union",
     val startDate: String? = null,
     val endDate: String? = null,
     val offset: Int = 0,
@@ -86,15 +98,13 @@ data class SearchRequest(
     }
 
     /** Converts this request to its wire-field map. */
-    fun toMap(): Map<String, Any?> = linkedMapOf(
+    internal fun toMap(): Map<String, Any?> = ImageEmbeddingWire.search(linkedMapOf(
         "query_text" to queryText,
         "query_metadata" to queryMetadata,
         "image_query" to imageQuery,
         "mode" to mode,
         "group_name" to groupName,
         "stream_name" to streamName,
-        "search_sources" to searchSources,
-        "search_combine_mode" to searchCombineMode,
         "start_date" to startDate,
         "end_date" to endDate,
         "offset" to offset,
@@ -102,7 +112,7 @@ data class SearchRequest(
         "text_emb_score_min" to textEmbScoreMin,
         "image_emb_score_min" to imageEmbScoreMin,
         "version_lancedb" to versionLancedb,
-    ).filterValues { it != null }
+    ).filterValues { it != null })
 }
 
 /**
@@ -177,8 +187,6 @@ data class CollectionAddAssetsRequest(
  * @property mode collection mode
  * @property groupName collection group name
  * @property streamName optional stream name
- * @property indexType optional index implementation
- * @property modality optional modality selector
  * @property insertMode append or replacement behavior
  * @property createIndex whether to build the index after insertion
  * @property version target version label
@@ -192,8 +200,6 @@ data class IndexationSubmitRequest(
     val mode: String,
     val groupName: String,
     val streamName: String? = null,
-    val indexType: String? = null,
-    val modality: String? = null,
     val insertMode: String = "append",
     val createIndex: Boolean = true,
     val version: String = "new_version",
@@ -210,12 +216,10 @@ data class IndexationSubmitRequest(
     }
 
     /** Converts this request to its wire-field map. */
-    fun toMap(): Map<String, Any?> = linkedMapOf(
+    internal fun toMap(): Map<String, Any?> = ImageEmbeddingWire.index(linkedMapOf(
         "mode" to mode,
         "group_name" to groupName,
         "stream_name" to streamName,
-        "index_type" to indexType,
-        "modality" to modality,
         "insert_mode" to insertMode,
         "create_index" to createIndex,
         "version" to version,
@@ -224,7 +228,7 @@ data class IndexationSubmitRequest(
         "embedding_model" to embeddingModel,
         "re_process" to reProcess,
         "dry_run" to dryRun,
-    ).filterValues { it != null }
+    ).filterValues { it != null })
 }
 
 /**
@@ -233,7 +237,6 @@ data class IndexationSubmitRequest(
  * @property mode collection mode
  * @property groupName collection group name
  * @property version version to delete
- * @property modality optional modality selector
  * @property dryRun whether to preview without mutation
  * @property confirm explicit deletion confirmation
  */
@@ -241,7 +244,6 @@ data class IndexationDeleteRequest(
     val mode: String,
     val groupName: String,
     val version: String,
-    val modality: String? = null,
     val dryRun: Boolean = false,
     val confirm: Boolean = false,
 ) {
@@ -253,14 +255,13 @@ data class IndexationDeleteRequest(
     }
 
     /** Converts this request to its wire-field map. */
-    fun toMap(): Map<String, Any?> = linkedMapOf(
+    internal fun toMap(): Map<String, Any?> = ImageEmbeddingWire.deleteIndex(linkedMapOf(
         "mode" to mode,
         "group_name" to groupName,
-        "modality" to modality,
         "version" to version,
         "dry_run" to dryRun,
         "confirm" to confirm,
-    ).filterValues { it != null }
+    ).filterValues { it != null })
 }
 
 /**
@@ -491,6 +492,18 @@ class VideoUploadResponse(raw: Map<String, Any?>) : JsonBackedResponse(raw) {
     val attemptCount = raw["attempt_count"].asInt()
     /** Normalized destination path. */
     val destPath = raw["dest_path"]?.toString().orEmpty()
+    /** Whether the source was transcoded before upload. */
+    val reduceSize = raw["reduce_size"] as? Boolean ?: false
+    /** Original local file path, present when a transcoder ran. */
+    val sourceFilePath = raw["source_filepath_local"]?.toString().orEmpty()
+    /** Original file size in bytes before any reduction. */
+    val sourceSizeBytes = raw["source_size_bytes"].asLong()
+    /** Whether the produced reduced temporary file was deleted after upload. */
+    val temporaryFileDeleted = raw["temporary_file_deleted"] as? Boolean ?: false
+    /** Whether a previously cached reduced file was reused. */
+    val temporaryFileReused = raw["temporary_file_reused"] as? Boolean ?: false
+    /** Local file path associated with this upload (the original when transcoded). */
+    val filePath = raw["filepath_local"]?.toString().orEmpty()
 }
 /** Ordered results for a bulk video upload. */
 class VideoUploadBulkResponse(raw: Map<String, Any?>) : JsonBackedResponse(raw) {

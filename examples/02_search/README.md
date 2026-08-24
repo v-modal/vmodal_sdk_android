@@ -31,8 +31,8 @@ Use the numbered actions in order:
    success, failure, or the 30-minute example timeout.
 4. **Search** refreshes the authenticated key's `vid_file` collections, rejects
    a collection that is not visible to that key, and sends the collection's
-   latest advertised LanceDB version with a limit of 50 and the sources `ocr`,
-   `asr`, and `image`. You can also search an existing indexed collection
+   latest advertised LanceDB version with a limit of 50 through the fixed
+   image-embedding pipeline. You can also search an existing indexed collection
    directly without selecting or uploading another video.
 
 Usable hits are converted to image coordinates and resolved in one bulk

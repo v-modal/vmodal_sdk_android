@@ -48,6 +48,7 @@ Choose the smallest public surface that matches the integration:
 | Coroutine resources | `Client.coroutines()` | Authentication, administration, images, R2, and lower-level content operations from a caller-owned coroutine scope |
 | Blocking resources | `Client(...)`, `Client.fromEnv(...)` | Existing Java, worker-thread, command-line, and compatibility integrations |
 | Callback uploads | `videoUploadAsync(...)`, `videoUploadBulkAsync(...)` | Existing callback code that needs an `UploadHandle` for cancellation |
+| Pre-upload transcode | `VideoTranscoder`, `VideoUploadOptions.transcoder` | Reducing resolution (for example to 360px) on device before upload; default is no transcoding |
 | Extension and test contracts | `VmodalTransport`, `SignedUploadTransport`, `VmodalHttp`, `VmodalFilePart`, `VmodalJson` | Injected transports, deterministic tests, and custom trusted integrations |
 
 The scoped content facade is the preferred surface for new Android content
@@ -321,6 +322,70 @@ Conservative settings are selected for low memory or unknown networks.
 Cellular uploads use at most two concurrent parts. Fast Wi-Fi uses its fastest
 preset only on a high-memory device. The policy also increases part size when
 needed to stay below the upstream 10,000-part limit.
+
+## Step 7: reduce resolution before upload (optional transcode)
+
+To cut upload bytes, a clip can be transcoded to a lower resolution (longer side
+360px) before it is sent. The core SDK is a pure Kotlin/JVM library with no
+Android-framework dependency, so it ships only the small `VideoTranscoder`
+interface and performs **no transcoding by default**. The app plugs in a device
+transcoder — for example one built on `androidx.media3.transformer` — through
+`VideoUploadOptions.transcoder`:
+
+```kotlin
+import androidx.media3.common.MediaItem
+import androidx.media3.effect.Presentation
+import androidx.media3.transformer.Composition
+import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.Effects
+import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.Transformer
+import com.vmodal.sdk.TranscodeResult
+import com.vmodal.sdk.VideoTranscoder
+import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicReference
+
+/** App-side transcoder: scales the longer side to 360px and writes an mp4 to the app cache. */
+class Media3TransformerTranscoder(private val context: Context) : VideoTranscoder {
+    override fun reduce(input: File): TranscodeResult {
+        val out = File(context.cacheDir, "vmodal_reduced_${input.name}")
+        if (out.isFile && out.length() > 0) return TranscodeResult(out, reused = true)
+
+        val edited = EditedMediaItem.Builder(MediaItem.fromUri(input.toURI().toString()))
+            .setEffects(Effects(emptyList(), listOf(Presentation.createForHeight(360))))
+            .build()
+        val error = AtomicReference<Exception>()
+        val latch = CountDownLatch(1)
+        val transformer = Transformer.Builder(context)
+            .addListener(object : Transformer.Listener {
+                override fun onCompleted(c: Composition, r: ExportResult) = latch.countDown()
+                override fun onError(c: Composition, r: ExportResult, e: androidx.media3.transformer.ExportException) {
+                    error.set(e); latch.countDown()
+                }
+            })
+            .build()
+        // Transformer requires the main thread to start; run this from a main-dispatched coroutine.
+        transformer.start(edited, out.absolutePath)
+        latch.await()
+        error.get()?.let { throw it }
+        return TranscodeResult(out, reused = false)
+    }
+}
+
+// Usage — default remains no transcoding; opt in per upload:
+val options = VideoUploadOptions().apply { transcoder = Media3TransformerTranscoder(context) }
+val response = sdk.collections.videoUpload(UploadSource.fromFile(file), "collection", "stream", options = options)
+// response.reduceSize == true, response.sourceSizeBytes == original bytes,
+// response.sizeBytes == uploaded (reduced) bytes, and the produced temp is deleted.
+```
+
+Transcoding requires a **file-backed** source (`UploadSource.fromFile`); a
+stream-only source with a non-passthrough transcoder raises `ValidationFailed`.
+Only a file the transcoder *produces* (a different path than the input) is
+uploaded and then deleted — the app's original file is never removed. The
+Gradle dependency is `androidx.media3:media3-transformer` (Apache-2.0); no
+ffmpeg binary is needed or supported on device.
 
 ## What signed multipart upload handles automatically
 

@@ -201,8 +201,6 @@ val job = client.indexes.createIndex(
     mode = "vid_file",
     groupName = collectionName,
     streamName = streamName,
-    indexType = "vid_img_emb",
-    modality = "vid_img_emb",
     version = "new_version",
     reProcess = true,
 )
@@ -237,7 +235,6 @@ val result = client.searches.searchVideo(
     mode = "vid_file",
     groupName = collectionName,
     streamName = streamName,
-    searchSources = listOf("image"),
     limit = 50,
     textEmbScoreMin = 0.0,
     imageEmbScoreMin = 0.0,

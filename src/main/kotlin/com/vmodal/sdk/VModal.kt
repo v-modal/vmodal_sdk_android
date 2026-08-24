@@ -200,8 +200,6 @@ class VModalScope internal constructor(
             mode = options.mode,
             groupName = scope.backendCollectionName,
             streamName = scope.streamName,
-            searchSources = options.searchSources,
-            searchCombineMode = options.searchCombineMode,
             startDate = options.startDate,
             endDate = options.endDate,
             offset = options.offset,
@@ -246,8 +244,6 @@ class VModalScope internal constructor(
             mode = options.mode,
             groupName = scope.backendCollectionName,
             streamName = scope.streamName,
-            indexType = options.indexType,
-            modality = options.modality,
             insertMode = options.insertMode,
             createIndex = options.createIndex,
             version = options.version,
@@ -282,7 +278,6 @@ class VModalScope internal constructor(
             mode = options.mode,
             groupName = scope.backendCollectionName,
             version = version,
-            modality = options.modality,
             dryRun = options.dryRun,
             confirm = options.confirm,
         )
@@ -339,8 +334,6 @@ data class ScopedMetadataOptions(
  * @property queryMetadata optional metadata filter
  * @property imageQuery optional encoded or referenced image query
  * @property mode backend media mode
- * @property searchSources modalities to search
- * @property searchCombineMode modality result combination mode
  * @property startDate optional inclusive start date
  * @property endDate optional inclusive end date
  * @property offset result offset
@@ -353,8 +346,6 @@ data class ScopedSearchOptions(
     val queryMetadata: Map<String, Any?>? = null,
     val imageQuery: String? = null,
     val mode: String = "vid_file",
-    val searchSources: List<String> = listOf("ocr", "asr", "image"),
-    val searchCombineMode: String = "union",
     val startDate: String? = null,
     val endDate: String? = null,
     val offset: Int = 0,
@@ -387,8 +378,6 @@ data class ScopedAssetChanges(
  * Scoped index creation behavior without organization fields.
  *
  * @property mode backend media mode
- * @property indexType optional index implementation
- * @property modality optional media modality
  * @property insertMode append or replacement behavior
  * @property createIndex whether to build the index after insertion
  * @property version target version label
@@ -400,8 +389,6 @@ data class ScopedAssetChanges(
  */
 data class ScopedCreateIndexOptions(
     val mode: String = "vid_file",
-    val indexType: String? = null,
-    val modality: String? = null,
     val insertMode: String = "append",
     val createIndex: Boolean = true,
     val version: String = "new_version",
@@ -429,13 +416,11 @@ data class ScopedIndexJobsOptions(
  * Scoped index deletion behavior without organization fields.
  *
  * @property mode backend media mode
- * @property modality optional media modality
  * @property dryRun whether to preview without mutation
  * @property confirm explicit deletion confirmation
  */
 data class ScopedDeleteIndexOptions(
     val mode: String = "vid_file",
-    val modality: String? = null,
     val dryRun: Boolean = false,
     val confirm: Boolean = false,
 )

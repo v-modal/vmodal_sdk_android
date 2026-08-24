@@ -49,7 +49,7 @@ The release coordinate is:
 
 ```kotlin
 dependencies {
-    implementation("com.vmodal:vmodal-sdk-android:1.0.0")
+    implementation("com.vmodal:vmodal-sdk-android:2.0.0")
 }
 ```
 
@@ -123,7 +123,6 @@ viewModelScope.launch {
         queryText = "the cyclist crossing the bridge at sunset",
         groupName = group.groupName,
         streamName = "astream",
-        searchSources = listOf("ocr", "asr", "image"),
         limit = 20,
         versionLancedb = version,
     )

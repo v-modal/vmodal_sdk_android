@@ -331,8 +331,6 @@ private class SearchRepository {
             mode = "vid_file",
             groupName = group,
             streamName = stream,
-            indexType = "vid_img_emb",
-            modality = "vid_img_emb",
             version = "new_version",
             reProcess = true,
         )
@@ -357,7 +355,6 @@ private class SearchRepository {
             mode = "vid_file",
             groupName = group,
             streamName = stream,
-            searchSources = listOf("ocr", "asr", "image"),
             limit = 50,
             versionLancedb = version,
         )
@@ -378,7 +375,7 @@ private class SearchRepository {
 
             val hit = candidates[inputIndex].first
             val filename = candidates[inputIndex].second["filename"]?.toString().orEmpty()
-            val title = firstText(hit, "text", "caption", "ocr", "asr", "description")
+            val title = firstText(hit, "text", "caption", "description")
                 .ifBlank { filename }
             val stamp = candidates[inputIndex].second["ts_unix_13digits"]?.toString().orEmpty()
             SearchImage(

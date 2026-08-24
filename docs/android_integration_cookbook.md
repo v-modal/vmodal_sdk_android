@@ -77,7 +77,6 @@ val scope = CookbookScope(
     mode = "vid_file",
     collection = selectedCollection,
     stream = selectedStream,
-    searchSources = listOf("ocr", "asr", "image"),
 )
 ```
 
@@ -145,12 +144,8 @@ away from its collection coordinates.
 
 Call `searchCookbookVideo()` with the ready scope:
 
-- `searchSources` selects OCR text, ASR speech, image similarity, or an explicit
-  subset. Do not infer sources from the query text.
-- `searchCombineMode="union"` asks the service to combine matches from any
-  selected source; use `intersection` only when the backend contract and the
-  desired product behavior require matches across sources. Ranking remains
-  backend-owned.
+- Search is fixed to the supported image-embedding pipeline. OCR/ASR and
+  source-combination selectors are not Android SDK options.
 - `queryMetadata` is a metadata filter, while `startDate`/`endDate` bound dates.
   Keep them separate from the natural-language query.
 - `textEmbScoreMin` and `imageEmbScoreMin` apply independent source thresholds.

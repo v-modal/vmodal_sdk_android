@@ -98,7 +98,6 @@ The most commonly repeated parameters are:
 | `groupName` / `collectionName` | Top-level logical collection | `field-tests` |
 | `streamName` / `subCollectionName` | Stream below the collection | `astream` |
 | `modality` | Stored representation | `vid_raw` or `image` |
-| `searchSources` | Signals included in search | `ocr`, `asr`, `image` |
 | `filename` | Stored or source filename | `camera-01.mp4` |
 
 Parameter names differ slightly between API families because the SDK preserves
@@ -219,8 +218,8 @@ data access should all be working.
 | [`02_create_direct_client.kt`](src/main/kotlin/com/vmodal/sdk/examples/02_create_direct_client.kt) | Construct an explicitly unsafe direct client | Trusted private downstream only |
 | [`03_identity_and_health.kt`](src/main/kotlin/com/vmodal/sdk/examples/03_identity_and_health.kt) | Print current identity and service health | Configured client |
 | [`03_rotate_api_key.kt`](src/main/kotlin/com/vmodal/sdk/examples/03_rotate_api_key.kt) | Load, rotate, and clear an app-owned credential | Same-user replacement keys |
-| [`04_text_search.kt`](src/main/kotlin/com/vmodal/sdk/examples/04_text_search.kt) | Run a minimal video text search | Indexed video collection |
-| [`05_filtered_search.kt`](src/main/kotlin/com/vmodal/sdk/examples/05_filtered_search.kt) | Search with metadata, sources, dates, and score threshold | Matching indexed metadata and date format |
+| [`04_text_search.kt`](src/main/kotlin/com/vmodal/sdk/examples/04_text_search.kt) | Run a minimal image-semantic video search | Indexed video collection |
+| [`05_filtered_search.kt`](src/main/kotlin/com/vmodal/sdk/examples/05_filtered_search.kt) | Search with metadata, dates, and score threshold | Matching indexed metadata and date format |
 | [`06_list_groups.kt`](src/main/kotlin/com/vmodal/sdk/examples/06_list_groups.kt) | Enumerate video collection groups | Read access |
 | [`07_small_file_upload.kt`](src/main/kotlin/com/vmodal/sdk/examples/07_small_file_upload.kt) | Use the legacy multipart-form upload endpoint | Small local file |
 | [`08_content_uri_source.kt`](src/main/kotlin/com/vmodal/sdk/examples/08_content_uri_source.kt) | Adapt an Android URI to a reopenable stream | URI permission and known content length |
@@ -309,7 +308,7 @@ clear persisted state and the provider, then discard and recreate the client.
 The provider's `current()` path must be synchronous and should never perform
 network or disk I/O.
 
-### 04 — Run a minimal text search
+### 04 — Run a minimal image-semantic search
 
 [`04_text_search.kt`](src/main/kotlin/com/vmodal/sdk/examples/04_text_search.kt) uses the convenient named-argument
 overload of `searchVideo()`. It first resolves the exact authenticated video

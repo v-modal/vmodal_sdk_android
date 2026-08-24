@@ -7,7 +7,6 @@ fun createAndInspectIndex(sdk: Client): IndexationStatusResponse {
     val created = sdk.indexes.createIndex(
         mode = "vid_file",
         groupName = "field-tests",
-        modality = "vid_raw",
         streamName = "astream",
         version = "new_version",
     )

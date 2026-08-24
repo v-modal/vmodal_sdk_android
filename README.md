@@ -4,8 +4,8 @@
   &nbsp;&nbsp;&nbsp;&nbsp;
   <img src="assets/android-original.svg" alt="Android" width="88">
   <h1>V-Modal AI for Android</h1>
-  <p><strong>Give your Android app a Visual Memory (Video, Audio,..)</strong></p>
-  <p>Upload video. Find moments by meaning, speech, text, or imagery.<br>Build the experience in Kotlin, Compose, Views, coroutines, and the Android tools you already know.</p>
+  <p><strong>Give your Android app a Visual Memory for video and images</strong></p>
+  <p>Upload video. Find moments by image-semantic meaning or imagery.<br>Build the experience in Kotlin, Compose, Views, coroutines, and the Android tools you already know.</p>
   <img src="https://img.shields.io/badge/Android-native-3DDC84?logo=android&logoColor=white" alt="Android native">
   <img src="https://img.shields.io/badge/Kotlin-1.9%2B-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin 1.9+">
   <img src="https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white" alt="Java 17">
@@ -35,7 +35,7 @@ V-Modal AI brings multimodal video search and mobile-friendly uploads to Kotlin 
 | Your Android experience | VModal gives you |
 |---|---|
 | “Find the red car entering the parking lot” | Semantic video and image search |
-| Search words spoken or shown on screen | ASR and OCR search sources |
+| Find a visual moment by meaning | Fixed image-semantic search |
 | Upload from the system photo picker | Streaming `content://` URI support |
 | A cancel action that really cancels | Cold upload Flow plus callback `UploadHandle` compatibility |
 | Compose, Views, or your own design system | A UI-free Kotlin client |
@@ -240,5 +240,4 @@ network behavior, the supported toolchain, and local validation.
 
 <!-- Track SDK usage : do not delete -->
 <img src="https://gettrack.link/p/sdk_android" width="1" height="1" alt="" style="display:none" />
-
 

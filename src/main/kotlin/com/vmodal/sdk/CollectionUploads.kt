@@ -38,7 +38,14 @@ data class VideoUploadOptions(
     val sessionStore: UploadSessionStore = UploadSessionStores.memory,
     val adaptiveConditions: UploadConditions? = null,
 ) {
-    /** Applies the optional adaptive policy without mutating this value. */
+    /**
+     * Pre-upload transcoder. The default performs no transcoding. An Android app injects its own
+     * device transcoder here, for example `options.transcoder = Media3TransformerTranscoder(ctx)`.
+     * Kept outside the primary constructor to preserve binary compatibility of this data class.
+     */
+    var transcoder: VideoTranscoder = PassthroughTranscoder
+
+    /** Applies the optional adaptive policy without mutating this value. Preserves [transcoder]. */
     fun resolvedFor(size: Long): VideoUploadOptions {
         if (!multipart) return this
         val conditions = adaptiveConditions ?: return this
@@ -48,11 +55,14 @@ data class VideoUploadOptions(
             maxConcurrency = preset.maxConcurrency,
             maxPartAttempts = preset.maxPartAttempts,
             partTimeoutSeconds = preset.partTimeoutSeconds,
-        )
+        ).also { it.transcoder = transcoder }
     }
 
-    /** Validates multipart settings against the source size. */
+    /** Validates the source size and multipart settings. */
     fun validate(size: Long) {
+        if (size > MAX_VIDEO_UPLOAD_BYTES) {
+            throw ValidationFailed("video file too large: $size bytes exceeds the $MAX_VIDEO_UPLOAD_BYTES bytes (100 MB) limit")
+        }
         if (!multipart) return
         if (partSizeBytes < 5L * 1024 * 1024) throw ValidationFailed("part_size_bytes must be at least 5 MiB")
         if (maxConcurrency !in 1..16) throw ValidationFailed("max_concurrency must be in 1..16")
@@ -60,6 +70,12 @@ data class VideoUploadOptions(
         if (partTimeoutSeconds <= 0) throw ValidationFailed("part_timeout_seconds must be positive")
         if (size <= 0) throw ValidationFailed("multipart size must be positive")
         if (partCount(size, partSizeBytes) > 10_000) throw ValidationFailed("part_size_bytes would create more than 10,000 parts")
+    }
+
+    /** Shared upload limits. */
+    companion object {
+        /** Max size for a single video upload (100 MB). Larger files are rejected. */
+        const val MAX_VIDEO_UPLOAD_BYTES: Long = 100L * 1024 * 1024
     }
 }
 
@@ -167,6 +183,9 @@ private fun CollectionsResource.videoUploadRun(
     handle: UploadHandle,
     onProgress: (UploadProgress) -> Unit,
 ): VideoUploadResponse {
+    if (!options.transcoder.isPassthrough) {
+        return transcodeThenUpload(source, collectionName, subCollectionName, mode, modality, ttl, options, handle, onProgress)
+    }
     return if (options.multipart) {
         try {
             multipartUpload(source, collectionName, subCollectionName, mode, modality, ttl, options, handle, onProgress)
@@ -179,6 +198,55 @@ private fun CollectionsResource.videoUploadRun(
     } else {
         singleUpload(source, collectionName, subCollectionName, mode, modality, ttl, handle, onProgress)
     }
+}
+
+/**
+ * Reduces the source through [VideoUploadOptions.transcoder], uploads the result, then removes any
+ * temporary file the transcoder produced. The original file is canonical and is never deleted.
+ * Parity with the reference Python SDK `video_upload(reduce_size=...)`.
+ */
+private fun CollectionsResource.transcodeThenUpload(
+    source: UploadSource,
+    collectionName: String,
+    subCollectionName: String,
+    mode: String,
+    modality: String,
+    ttl: Int,
+    options: VideoUploadOptions,
+    handle: UploadHandle,
+    onProgress: (UploadProgress) -> Unit,
+): VideoUploadResponse {
+    val input = source.localFile
+        ?: throw ValidationFailed("transcoding requires a file-backed UploadSource (use UploadSource.fromFile)")
+    val sourceSize = input.length()
+    val result = options.transcoder.reduce(input)
+    // A transcoder that returns the original file (identity) is treated as a passthrough: no temp,
+    // no cleanup. Only a produced file at a different path is uploaded and then deleted.
+    val produced = result.output.canonicalFile != input.canonicalFile
+    if (produced && (!result.output.isFile || result.output.length() <= 0)) {
+        throw ValidationFailed("transcoder produced an empty video", details = result.output.path)
+    }
+    val uploadSource = if (produced) UploadSource.fromFile(result.output, source.contentType) else source
+    // A bare copy() resets the (non-constructor) transcoder to the passthrough default, so the
+    // recursive run uploads the reduced file directly instead of transcoding again.
+    val inner = options.copy().resolvedFor(uploadSource.contentLength)
+    inner.validate(uploadSource.contentLength)
+    val uploaded = videoUploadRun(uploadSource, collectionName, subCollectionName, mode, modality, ttl, inner, handle, onProgress)
+    var deleted = false
+    if (produced) {
+        deleted = result.output.delete() || !result.output.exists()
+        if (!deleted) {
+            throw ApiError("upload completed but reduced temporary video still exists", body = mapOf("uploaded" to true))
+        }
+    }
+    return VideoUploadResponse(uploaded.raw + mapOf(
+        "reduce_size" to produced,
+        "source_filepath_local" to input.absolutePath,
+        "source_size_bytes" to sourceSize,
+        "temporary_file_deleted" to (produced && deleted),
+        "temporary_file_reused" to result.reused,
+        "filepath_local" to input.absolutePath,
+    ))
 }
 
 private fun CollectionsResource.singleUpload(

@@ -38,8 +38,6 @@ class SearchesResource(private val http: VmodalHttp) {
         mode: String = "vid_file",
         groupName: String = "agroup",
         streamName: String = "astream",
-        searchSources: List<String> = listOf("ocr", "asr", "image"),
-        searchCombineMode: String = "union",
         startDate: String? = null,
         endDate: String? = null,
         offset: Int = 0,
@@ -48,8 +46,21 @@ class SearchesResource(private val http: VmodalHttp) {
         imageEmbScoreMin: Double = 1.5,
         versionLancedb: Int? = null,
     ): SearchResponse = searchVideo(
-        SearchRequest(queryText, queryMetadata, imageQuery, mode, groupName, streamName, searchSources, searchCombineMode,
-            startDate, endDate, offset, limit, textEmbScoreMin, imageEmbScoreMin, versionLancedb)
+        SearchRequest(
+            queryText = queryText,
+            queryMetadata = queryMetadata,
+            imageQuery = imageQuery,
+            mode = mode,
+            groupName = groupName,
+            streamName = streamName,
+            startDate = startDate,
+            endDate = endDate,
+            offset = offset,
+            limit = limit,
+            textEmbScoreMin = textEmbScoreMin,
+            imageEmbScoreMin = imageEmbScoreMin,
+            versionLancedb = versionLancedb,
+        )
     )
 }
 
@@ -172,12 +183,22 @@ class IndexesResource(private val http: VmodalHttp) {
 
     /** Convenience overload that constructs and validates an index request. */
     fun createIndex(
-        mode: String = "", groupName: String = "", indexType: String? = null, modality: String? = null,
-        streamName: String? = null, insertMode: String = "append", createIndex: Boolean = true,
+        mode: String = "", groupName: String = "", streamName: String? = null, insertMode: String = "append", createIndex: Boolean = true,
         version: String = "new_version", startDate: String? = null, endDate: String? = null,
         embeddingModel: String? = null, reProcess: Boolean = false, dryRun: Boolean = false,
-    ) = createIndex(IndexationSubmitRequest(mode, groupName, streamName, indexType, modality, insertMode, createIndex,
-        version, startDate, endDate, embeddingModel, reProcess, dryRun))
+    ) = createIndex(IndexationSubmitRequest(
+        mode = mode,
+        groupName = groupName,
+        streamName = streamName,
+        insertMode = insertMode,
+        createIndex = createIndex,
+        version = version,
+        startDate = startDate,
+        endDate = endDate,
+        embeddingModel = embeddingModel,
+        reProcess = reProcess,
+        dryRun = dryRun,
+    ))
 
     /** Returns current status for a required job identifier. */
     fun indexStatus(jobId: String = ""): IndexationStatusResponse {
@@ -197,8 +218,14 @@ class IndexesResource(private val http: VmodalHttp) {
         IndexationDeleteResponse(http.request("DELETE", Routes.full(Routes.Endpoints.indexationDelete), json = request.also { it.validate() }.toMap()))
 
     /** Convenience overload that constructs and validates a deletion request. */
-    fun deleteIndex(mode: String = "", groupName: String = "", version: String = "", modality: String? = null, dryRun: Boolean = false, confirm: Boolean = false) =
-        deleteIndex(IndexationDeleteRequest(mode, groupName, version, modality, dryRun, confirm))
+    fun deleteIndex(mode: String = "", groupName: String = "", version: String = "", dryRun: Boolean = false, confirm: Boolean = false) =
+        deleteIndex(IndexationDeleteRequest(
+            mode = mode,
+            groupName = groupName,
+            version = version,
+            dryRun = dryRun,
+            confirm = confirm,
+        ))
 
     /** Always throws [FeatureDisabled] before transport. */
     fun embeddingModels(): Nothing = throw FeatureDisabled("embedding models endpoint is disabled on server")

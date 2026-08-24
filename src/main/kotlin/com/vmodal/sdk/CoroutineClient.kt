@@ -111,8 +111,6 @@ class CoroutineSearchesResource internal constructor(
         mode: String = "vid_file",
         groupName: String = "agroup",
         streamName: String = "astream",
-        searchSources: List<String> = listOf("ocr", "asr", "image"),
-        searchCombineMode: String = "union",
         startDate: String? = null,
         endDate: String? = null,
         offset: Int = 0,
@@ -122,9 +120,19 @@ class CoroutineSearchesResource internal constructor(
         versionLancedb: Int? = null,
     ): SearchResponse = searchVideo(
         SearchRequest(
-            queryText, queryMetadata, imageQuery, mode, groupName, streamName, searchSources,
-            searchCombineMode, startDate, endDate, offset, limit, textEmbScoreMin,
-            imageEmbScoreMin, versionLancedb,
+            queryText = queryText,
+            queryMetadata = queryMetadata,
+            imageQuery = imageQuery,
+            mode = mode,
+            groupName = groupName,
+            streamName = streamName,
+            startDate = startDate,
+            endDate = endDate,
+            offset = offset,
+            limit = limit,
+            textEmbScoreMin = textEmbScoreMin,
+            imageEmbScoreMin = imageEmbScoreMin,
+            versionLancedb = versionLancedb,
         )
     )
 }
@@ -426,8 +434,6 @@ class CoroutineIndexesResource internal constructor(
     suspend fun createIndex(
         mode: String = "",
         groupName: String = "",
-        indexType: String? = null,
-        modality: String? = null,
         streamName: String? = null,
         insertMode: String = "append",
         createIndex: Boolean = true,
@@ -439,8 +445,17 @@ class CoroutineIndexesResource internal constructor(
         dryRun: Boolean = false,
     ): IndexationSubmitResponse = createIndex(
         IndexationSubmitRequest(
-            mode, groupName, streamName, indexType, modality, insertMode, createIndex, version,
-            startDate, endDate, embeddingModel, reProcess, dryRun,
+            mode = mode,
+            groupName = groupName,
+            streamName = streamName,
+            insertMode = insertMode,
+            createIndex = createIndex,
+            version = version,
+            startDate = startDate,
+            endDate = endDate,
+            embeddingModel = embeddingModel,
+            reProcess = reProcess,
+            dryRun = dryRun,
         )
     )
 
@@ -476,11 +491,16 @@ class CoroutineIndexesResource internal constructor(
         mode: String = "",
         groupName: String = "",
         version: String = "",
-        modality: String? = null,
         dryRun: Boolean = false,
         confirm: Boolean = false,
     ): IndexationDeleteResponse = deleteIndex(
-        IndexationDeleteRequest(mode, groupName, version, modality, dryRun, confirm)
+        IndexationDeleteRequest(
+            mode = mode,
+            groupName = groupName,
+            version = version,
+            dryRun = dryRun,
+            confirm = confirm,
+        )
     )
 
     /** Suspending counterpart of disabled [IndexesResource.embeddingModels]. */

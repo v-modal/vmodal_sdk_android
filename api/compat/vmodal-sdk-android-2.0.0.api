@@ -1566,4 +1566,3 @@ public abstract interface class com/vmodal/sdk/VmodalTransportCallback {
 	public abstract fun onFailure (Ljava/lang/Throwable;)V
 	public abstract fun onSuccess (Lcom/vmodal/sdk/VmodalResponse;)V
 }
-

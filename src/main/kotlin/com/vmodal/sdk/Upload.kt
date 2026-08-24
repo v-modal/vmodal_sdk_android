@@ -41,6 +41,13 @@ class UploadSource(
     private val rangeOpener: ((Long) -> InputStream)? = null,
     private val opener: () -> InputStream,
 ) {
+    /**
+     * Backing file when the source is file-backed (set by [fromFile]), enabling pre-upload
+     * transcoding. Null for stream-only sources.
+     */
+    var localFile: File? = null
+        private set
+
     init {
         strMultipartValue("file name", fileName, 1_024)
         strMultipartValue("content type", contentType, 255)
@@ -75,7 +82,7 @@ class UploadSource(
                 file.absolutePath,
                 "${file.length()}:${file.lastModified()}",
                 { offset -> FileInputStream(file).apply { channel.position(offset) } },
-            ) { file.inputStream() }
+            ) { file.inputStream() }.also { it.localFile = file }
         }
     }
 }

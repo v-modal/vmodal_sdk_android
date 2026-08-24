@@ -120,7 +120,6 @@ private fun liveCleanup(
                 mode = "vid_file",
                 groupName = group,
                 version = version.ifBlank { "all" },
-                modality = "vid_img_emb",
                 confirm = true,
             )
         } catch (exc: Throwable) {

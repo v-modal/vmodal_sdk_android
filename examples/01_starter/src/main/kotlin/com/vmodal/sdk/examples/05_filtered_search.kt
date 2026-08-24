@@ -15,8 +15,6 @@ fun searchWithFilters(sdk: Client): SearchResponse {
         queryMetadata = mapOf("site" to "warehouse-a"),
         mode = "vid_file",
         groupName = group.groupName,
-        searchSources = listOf("ocr", "asr", "image"),
-        searchCombineMode = "union",
         startDate = "2026-07-01",
         endDate = "2026-07-14",
         textEmbScoreMin = 0.92,

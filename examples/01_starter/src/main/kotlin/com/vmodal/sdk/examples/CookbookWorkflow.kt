@@ -16,7 +16,6 @@ data class CookbookScope(
     val stream: String,
     val mode: String = "vid_file",
     val indexVersion: String = "new_version",
-    val searchSources: List<String> = listOf("ocr", "asr", "image"),
 )
 
 /** Scope after a successful index job advertises a numeric LanceDB version. */
@@ -56,8 +55,6 @@ suspend fun submitCookbookIndex(client: Client, scope: CookbookScope): Indexatio
         mode = scope.mode,
         groupName = scope.collection,
         streamName = scope.stream,
-        indexType = "vid_img_emb",
-        modality = "vid_img_emb",
         version = scope.indexVersion,
         reProcess = true,
     )
@@ -102,8 +99,6 @@ suspend fun searchCookbookVideo(
         mode = operation.mode,
         groupName = operation.collection,
         streamName = operation.stream,
-        searchSources = operation.searchSources,
-        searchCombineMode = "union",
         offset = 0,
         limit = 50,
         versionLancedb = scope.lancedbVersion,
