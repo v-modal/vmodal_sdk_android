@@ -582,12 +582,7 @@ internal fun searchCandidates(
         "source_path",
         "path",
     )
-    val liveTitle = strSearchFirst(row, "title").takeIf {
-        filenameAlias.isBlank() &&
-            strSearchFirst(row, "item_id").isNotBlank() &&
-            strSearchFirst(row, "ts_unix_13digits", "ts_unix", "timestamp_ms").isNotBlank()
-    }.orEmpty()
-    val rawName = filenameAlias.ifBlank { liveTitle }
+    val rawName = filenameAlias.ifBlank { candidateFileName(row) }
     val filename = strSearchFilename(rawName)
     if (filename.isBlank()) return@mapIndexedNotNull null
 
@@ -601,6 +596,26 @@ internal fun searchCandidates(
     val stamp = strTimestamp13(strSearchFirst(row, "ts_unix_13digits", "ts_unix", "timestamp_ms"))
     if (stamp.isNotBlank()) record["ts_unix_13digits"] = stamp
     SearchCandidate(rank, row, record)
+}
+private fun candidateFileName(row: Map<String, Any?>): String {
+    // Prefer the explicit title, then reconstruct from item_id.
+    val title = strSearchFirst(row, "title")
+    if (title.isNotBlank()) return title
+
+    val id = strSearchFirst(row, "item_id")
+    val stream = strSearchFirst(row, "stream")
+    val unix = strSearchFirst(row, "ts_unix")
+    if (id.isBlank() || stream.isBlank() || unix.isBlank()) return ""
+
+    var middle = id
+    if (middle.startsWith("$stream-")) {
+        middle = middle.removePrefix("$stream-")
+    }
+    if (middle.endsWith("-$unix")) {
+        middle = middle.removeSuffix("-$unix")
+    }
+    middle = middle.trim()
+    return middle.ifEmpty { id }
 }
 
 internal fun searchImages(
