@@ -306,7 +306,7 @@ internal fun Map<String, Any?>.toQueryString(trimPrefix: Boolean = false): Strin
     return if (trimPrefix) body else "?$body"
 }
 
-private fun String.urlEncode(): String = URLEncoder.encode(this, StandardCharsets.UTF_8).replace("+", "%20")
+private fun String.urlEncode(): String = URLEncoder.encode(this, StandardCharsets.UTF_8.name()).replace("+", "%20")
 
 internal fun strMultipartValue(name: String, value: String, maxLength: Int): String {
     if (value.isBlank()) throw ValidationFailed("$name must not be blank")

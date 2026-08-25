@@ -1,7 +1,8 @@
 // GENERATED — DO NOT EDIT. Anti-grep only.
 package com.vmodal.sdk
 
-import java.util.Base64
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 internal data class GeneratedRoute(
     val id: String,
@@ -126,6 +127,6 @@ internal object RoutesGenerated {
         return row.method to row.path
     }
 
-    internal fun strDecode(value: String): String =
-        String(Base64.getDecoder().decode(value), Charsets.UTF_8)
+    @OptIn(ExperimentalEncodingApi::class)
+    internal fun strDecode(value: String): String = Base64.decode(value).toString(Charsets.UTF_8)
 }
