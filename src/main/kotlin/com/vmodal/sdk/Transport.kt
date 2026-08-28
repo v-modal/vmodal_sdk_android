@@ -2,6 +2,7 @@ package com.vmodal.sdk
 
 import java.io.File
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.HttpURLConnection
@@ -155,6 +156,7 @@ class HttpUrlConnectionTransport private constructor(
         val base = if (strIsAbsoluteHttpUrl(request.path)) "" else cfg.normalizedBaseUrl
         val url = validatedHttpUrl(base + request.path + request.queryParameters.toQueryString())
         val boundary = "----vmodal-${UUID.randomUUID()}"
+        val multipart = if (request.files.isNotEmpty()) request.multipartPlan(boundary) else null
         val conn = url.openConnection() as HttpURLConnection
         try {
             conn.apply {
@@ -172,9 +174,10 @@ class HttpUrlConnectionTransport private constructor(
             }
             if (request.method.uppercase() !in listOf("GET", "HEAD") && request.hasBody()) {
                 conn.doOutput = true
+                if (multipart != null) conn.setFixedLengthStreamingMode(multipart.contentLength)
                 conn.outputStream.use { out ->
                     when {
-                        request.files.isNotEmpty() -> request.writeMultipart(out, boundary)
+                        multipart != null -> multipart.writeTo(out)
                         request.formFields.isNotEmpty() -> out.write(request.formFields.toQueryString(true).toByteArray(StandardCharsets.UTF_8))
                         request.jsonBody != null -> out.write(VmodalJson.stringify(request.jsonBody).toByteArray(StandardCharsets.UTF_8))
                     }
@@ -321,9 +324,12 @@ internal fun VmodalRequest.validateMultipart() {
     formFields.keys.forEach { strMultipartValue("field name", it, 128) }
 }
 
-internal fun VmodalRequest.writeMultipart(out: OutputStream, boundary: String) {
+internal fun VmodalRequest.multipartPlan(boundary: String): MultipartPlan {
     validateMultipart()
-    fun text(value: String) = out.write(value.toByteArray(StandardCharsets.UTF_8))
+    val items = mutableListOf<MultipartItem>()
+    fun text(value: String) {
+        items += MultipartItem.Bytes(value.toByteArray(StandardCharsets.UTF_8))
+    }
     formFields.forEach { (key, value) ->
         val values = if (value is Iterable<*>) value.toList() else listOf(value)
         values.filterNotNull().forEach {
@@ -333,8 +339,56 @@ internal fun VmodalRequest.writeMultipart(out: OutputStream, boundary: String) {
     files.forEach { part ->
         text("--$boundary\r\nContent-Disposition: form-data; name=\"${part.fieldName.strMultipartQuoted()}\"; filename=\"${part.fileName.strMultipartQuoted()}\"\r\n")
         text("Content-Type: ${part.contentType}\r\n\r\n")
-        part.open().use { it.copyTo(out, 1024 * 1024) }
+        items += MultipartItem.File(part)
         text("\r\n")
     }
     text("--$boundary--\r\n")
+    return MultipartPlan(boundary, items.toList())
+}
+
+internal fun VmodalRequest.writeMultipart(out: OutputStream, boundary: String) {
+    multipartPlan(boundary).writeTo(out)
+}
+
+internal class MultipartPlan(
+    val boundary: String,
+    private val items: List<MultipartItem>,
+) {
+    val contentLength: Long = items.fold(0L) { total, item -> Math.addExact(total, item.length) }
+
+    fun writeTo(out: OutputStream) {
+        var emitted = 0L
+        items.forEach { item ->
+            when (item) {
+                is MultipartItem.Bytes -> out.write(item.value)
+                is MultipartItem.File -> item.part.open().use { input -> input.copyExactTo(out, item.length) }
+            }
+            emitted = Math.addExact(emitted, item.length)
+        }
+        if (emitted != contentLength) throw IOException("multipart emitted length mismatch")
+    }
+}
+
+internal sealed class MultipartItem(val length: Long) {
+    class Bytes(val value: ByteArray) : MultipartItem(value.size.toLong())
+    class File(val part: VmodalFilePart) : MultipartItem(part.contentLength)
+}
+
+private fun InputStream.copyExactTo(out: OutputStream, length: Long) {
+    val buf = ByteArray(1024 * 1024)
+    var sent = 0L
+    while (sent < length) {
+        val count = read(buf, 0, minOf(buf.size.toLong(), length - sent).toInt())
+        if (count < 0) throw IOException("multipart source ended early")
+        if (count == 0) {
+            val value = read()
+            if (value < 0) throw IOException("multipart source ended early")
+            out.write(value)
+            sent++
+            continue
+        }
+        out.write(buf, 0, count)
+        sent += count
+    }
+    if (read() >= 0) throw IOException("multipart source exceeded declared length")
 }

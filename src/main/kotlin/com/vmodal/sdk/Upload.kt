@@ -114,24 +114,33 @@ data class SignedUploadResult(
 /** Cancellation handle shared by all requests in one asynchronous upload. */
 class UploadHandle internal constructor() {
     private val canceled = AtomicBoolean(false)
+    private val stopped = AtomicBoolean(false)
     private val calls = CopyOnWriteArrayList<Call>()
     private val requests = CopyOnWriteArrayList<VmodalCancelHandle>()
 
     /** Whether cancellation has been requested. */
     val isCanceled: Boolean get() = canceled.get()
+    internal val isStopped: Boolean get() = stopped.get()
 
     /** Requests cancellation and cancels every active transport call. */
     fun cancel() {
         canceled.set(true)
+        stop()
+    }
+
+    internal fun stop() {
+        stopped.set(true)
         calls.forEach { it.cancel() }
         requests.forEach { it.cancel() }
-        calls.clear()
-        requests.clear()
+    }
+
+    internal fun complete() {
+        stopped.set(true)
     }
 
     internal fun add(call: Call) {
         calls += call
-        if (isCanceled) {
+        if (stopped.get()) {
             call.cancel()
             calls -= call
         }
@@ -143,7 +152,7 @@ class UploadHandle internal constructor() {
 
     internal fun add(request: VmodalCancelHandle) {
         requests += request
-        if (isCanceled) {
+        if (stopped.get()) {
             request.cancel()
             requests -= request
         }
@@ -154,10 +163,24 @@ class UploadHandle internal constructor() {
     }
 
     internal fun ensureActive() {
-        if (isCanceled) throw ApiError("upload canceled")
+        if (stopped.get()) throw ApiError("upload canceled")
     }
 
     internal val activeCallCount: Int get() = calls.size + requests.size
+
+    internal fun awaitQuiescence(timeoutMillis: Long = 5_000): Boolean {
+        val end = System.nanoTime() + timeoutMillis * 1_000_000
+        var interrupted = false
+        while (activeCallCount > 0 && System.nanoTime() < end) {
+            try {
+                Thread.sleep(5)
+            } catch (_: InterruptedException) {
+                interrupted = true
+            }
+        }
+        if (interrupted) Thread.currentThread().interrupt()
+        return activeCallCount == 0
+    }
 }
 
 /** Injectable asynchronous byte transport for pre-authorized upload locations. */

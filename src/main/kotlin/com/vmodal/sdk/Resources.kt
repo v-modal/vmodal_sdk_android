@@ -66,6 +66,8 @@ class SearchesResource(private val http: VmodalHttp) {
 
 /** Collection discovery, mutation, metadata, and upload operations. */
 class CollectionsResource(internal val http: VmodalHttp, internal val signedUploads: SignedUploadTransport) {
+    internal var uploadScheduler: UploadScheduler = processUploadScheduler
+
     /** Lists accessible collection groups, optionally filtered by mode. */
     fun listGroups(mode: String? = null): GroupsResponse {
         val params = if (mode == null) emptyMap() else mapOf("mode" to mode)

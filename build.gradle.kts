@@ -17,7 +17,7 @@ plugins {
 }
 
 group = "com.vmodal"
-version = "2.0.0"
+version = "2.0.1"
 
 dependencies {
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
@@ -150,6 +150,7 @@ val deterministicTests = listOf(
     Triple("vModalFacadeTest", "VModalFacadeTest.kt", "com.vmodal.sdk.VModalFacadeTestKt"),
     Triple("diagnosticsRegressionTest", "DiagnosticsRegressionTest.kt", "com.vmodal.sdk.DiagnosticsRegressionTestKt"),
     Triple("transcodeUploadTest", "TranscodeUploadTest.kt", "com.vmodal.sdk.TranscodeUploadTestKt"),
+    Triple("resourceBoundsRegressionTest", "ResourceBoundsRegressionTest.kt", "com.vmodal.sdk.ResourceBoundsRegressionTestKt"),
 )
 
 val deterministicTestDir = file("src/test/kotlin/com/vmodal/sdk")

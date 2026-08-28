@@ -196,10 +196,19 @@ its returned `UploadHandle`; the callback API remains supported for
 operation-by-operation migration. Every file size uses one signed upload by
 default. Multipart is never selected automatically by file size.
 
+The built-in high-level upload engine has separate bounded orchestration and
+data lanes. If its operation queue is full, callback APIs invoke `onFailure`
+with `ValidationFailed` before returning the stopped (but not user-canceled)
+handle; suspend and Flow surfaces receive the same typed failure. This bound
+does not apply to direct calls to an injected `SignedUploadTransport`.
+
 The `/api/external/v1/collections/external_upload_multipart/*` route family is
 not available on the production gateway. `VideoUploadOptions(multipart = true)`
 is an explicit experimental opt-in for a custom gateway with the complete
 route family. A missing route produces a clear `FeatureDisabled` error.
+Only one active multipart operation may own an exact destination/source/part
+contract. A duplicate fails immediately with `ValidationFailed` before reading
+the source, checkpoint, or network. Different session keys remain independent.
 
 Collect from caller-owned `viewModelScope`, `lifecycleScope`, or a worker. The
 SDK never hard-codes `Dispatchers.Main`; the application owns UI state and
@@ -398,6 +407,8 @@ ffmpeg binary is needed or supported on device.
 - Checking server status before retransmitting a part when the response may
   have been lost
 - Excluding VModal identity and authorization headers from presigned R2 PUTs
+- Exact monotonic aggregate progress across part retries
+- Cooperative sibling-call cleanup before a high-level terminal failure
 
 Other 4xx responses and integrity failures stop immediately so the app can show
 the real error instead of retrying indefinitely.
@@ -405,6 +416,10 @@ the real error instead of retrying indefinitely.
 `UploadSource.fromFile(file)` seeks directly to each part offset. A custom
 source can provide `rangeOpener = { offset -> ... }` if its provider supports
 seeking. Otherwise, the SDK uses bounded buffered skipping.
+
+Low-level multipart-form file parts also require truthful declared lengths.
+Both built-in transports advertise one exact total and reject early EOF or
+extra source bytes instead of silently emitting a different request body.
 
 ## Troubleshooting uploads
 

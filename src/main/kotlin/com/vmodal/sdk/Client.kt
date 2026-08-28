@@ -4,7 +4,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 
 /** Published SDK semantic version. */
-const val VMODAL_SDK_VERSION = "2.0.0"
+const val VMODAL_SDK_VERSION = "2.0.1"
 
 internal class HttpUrlConnectionTransportDefault(cfg: SdkConfig) :
     VmodalTransport by HttpUrlConnectionTransport(cfg)

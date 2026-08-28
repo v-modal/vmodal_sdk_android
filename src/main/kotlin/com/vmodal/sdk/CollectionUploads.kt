@@ -2,16 +2,15 @@ package com.vmodal.sdk
 
 import java.io.IOException
 import java.util.UUID
-import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutionException
-import java.util.concurrent.ExecutorCompletionService
-import java.util.concurrent.Executors
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.LockSupport
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 /**
  * Signed-upload policy including retry, resume, cancellation, and explicit
@@ -79,7 +78,10 @@ data class VideoUploadOptions(
     }
 }
 
-/** Starts a non-blocking, cancelable upload and returns its [UploadHandle]. */
+/**
+ * Starts a non-blocking, cancelable upload and returns its [UploadHandle]. A saturated high-level
+ * queue invokes [onFailure] with [ValidationFailed] before this method returns.
+ */
 fun CollectionsResource.videoUploadAsync(
     source: UploadSource,
     collectionName: String,
@@ -97,13 +99,20 @@ fun CollectionsResource.videoUploadAsync(
     val handle = UploadHandle()
     // The orchestration runs off the UI thread and links every cancellable gateway and signed
     // storage request to the same operation handle.
-    uploadExecutor.execute {
+    val admitted = uploadScheduler.execute(handle) {
         try {
             val result = videoUploadRun(source, collectionName, subCollectionName, mode, modality, ttl, resolved, handle, onProgress)
+            handle.complete()
             if (!handle.isCanceled) onSuccess(result)
         } catch (exc: Exception) {
+            handle.stop()
+            handle.awaitQuiescence()
             if (!handle.isCanceled) onFailure(exc)
         }
+    }
+    if (!admitted) {
+        handle.stop()
+        onFailure(ValidationFailed("high-level upload queue is full"))
     }
     return handle
 }
@@ -121,7 +130,17 @@ fun CollectionsResource.videoUpload(
 ): VideoUploadResponse {
     val resolved = options.resolvedFor(source.contentLength)
     resolved.validate(source.contentLength)
-    return videoUploadRun(source, collectionName, subCollectionName, mode, modality, ttl, resolved, UploadHandle(), onProgress)
+    val handle = UploadHandle()
+    return uploadScheduler.runBlocking(handle) {
+        try {
+            videoUploadRun(source, collectionName, subCollectionName, mode, modality, ttl, resolved, handle, onProgress)
+                .also { handle.complete() }
+        } catch (exc: Exception) {
+            handle.stop()
+            handle.awaitQuiescence()
+            throw exc
+        }
+    }
 }
 
 /** Uploads sources sequentially on the calling worker thread. */
@@ -138,7 +157,10 @@ fun CollectionsResource.videoUploadBulk(
     return VideoUploadBulkResponse(mapOf("data" to data.map { it.raw }, "total" to data.size))
 }
 
-/** Starts a cancelable bulk upload and reports aggregate byte progress. */
+/**
+ * Starts a cancelable bulk upload and reports aggregate byte progress. A saturated high-level
+ * queue invokes [onFailure] with [ValidationFailed] before this method returns.
+ */
 fun CollectionsResource.videoUploadBulkAsync(
     sources: List<UploadSource>,
     collectionName: String,
@@ -153,7 +175,7 @@ fun CollectionsResource.videoUploadBulkAsync(
 ): UploadHandle {
     val resolved = sources.map { source -> options.resolvedFor(source.contentLength).also { it.validate(source.contentLength) } }
     val handle = UploadHandle()
-    uploadExecutor.execute {
+    val admitted = uploadScheduler.execute(handle) {
         try {
             val total = sources.sumOf { it.contentLength }
             var completed = 0L
@@ -164,10 +186,17 @@ fun CollectionsResource.videoUploadBulkAsync(
                 completed += source.contentLength
                 item
             }
+            handle.complete()
             if (!handle.isCanceled) onSuccess(VideoUploadBulkResponse(mapOf("data" to data.map { it.raw }, "total" to data.size)))
         } catch (exc: Exception) {
+            handle.stop()
+            handle.awaitQuiescence()
             if (!handle.isCanceled) onFailure(exc)
         }
+    }
+    if (!admitted) {
+        handle.stop()
+        onFailure(ValidationFailed("high-level upload queue is full"))
     }
     return handle
 }
@@ -296,13 +325,16 @@ private fun CollectionsResource.multipartUpload(
     onProgress: (UploadProgress) -> Unit,
 ): VideoUploadResponse {
     val sessionKey = multipartSessionKey(source, collectionName, subCollectionName, mode, modality, options)
-    val lock = uploadLocks[(sessionKey.hashCode() and Int.MAX_VALUE) % uploadLocks.size]
-    return lock.withLock {
-        multipartUploadLocked(source, collectionName, subCollectionName, mode, modality, ttl, options, sessionKey, handle, onProgress)
+    val owner = uploadSessionOwners.acquire(sessionKey)
+        ?: throw ValidationFailed("multipart upload is already active for this session")
+    return try {
+        multipartUploadOwned(source, collectionName, subCollectionName, mode, modality, ttl, options, sessionKey, handle, onProgress)
+    } finally {
+        uploadSessionOwners.release(owner)
     }
 }
 
-private fun CollectionsResource.multipartUploadLocked(
+private fun CollectionsResource.multipartUploadOwned(
     source: UploadSource,
     collectionName: String,
     subCollectionName: String,
@@ -366,21 +398,13 @@ private fun CollectionsResource.multipartUploadLocked(
     }
     options.sessionStore.save(sessionKey, active.toMap())
     val missing = (1..active.partCount).filter { it !in valid }
-    val sentByPart = ConcurrentHashMap<Int, Long>()
-    valid.forEach { (number, part) -> sentByPart[number] = part["size_bytes"].asLong() }
-    val progressLock = Any()
-    var lastProgress = 0L
-    fun reportProgress() {
-        synchronized(progressLock) {
-            val sent = sentByPart.values.sum().coerceIn(0, source.contentLength)
-            lastProgress = maxOf(lastProgress, sent)
-            onProgress(UploadProgress(lastProgress, source.contentLength))
-        }
-    }
-    if (sentByPart.isNotEmpty()) reportProgress()
+    val progress = MultipartProgress(source.contentLength, handle, onProgress)
+    valid.forEach { (number, part) -> progress.record(number, part["size_bytes"].asLong(), false) }
+    if (valid.isNotEmpty()) progress.emit()
 
     var attempts = 0
-    val pool = Executors.newFixedThreadPool(options.maxConcurrency)
+    val partPermits = Semaphore(options.maxConcurrency)
+    var futures = emptyList<java.util.concurrent.Future<UploadedPart>>()
     try {
         missing.chunked(minOf(32, options.maxConcurrency * 2)).forEach { batch ->
             handle.ensureActive()
@@ -389,31 +413,50 @@ private fun CollectionsResource.multipartUploadLocked(
             if (signedParts.size != batch.size || signed.keys != batch.toSet()) {
                 throw ApiError("multipart sign response did not match requested parts")
             }
-            val completed = ExecutorCompletionService<UploadedPart>(pool)
-            val futures = batch.map { number ->
-                completed.submit(Callable {
-                    multipartPutOne(source, active, number, signed.getValue(number), ttl, options, handle) { progress ->
-                        sentByPart[number] = progress.uploadedBytes
-                        reportProgress()
+            futures = batch.map { number ->
+                uploadScheduler.submitData(java.util.concurrent.Callable {
+                    partPermits.acquire()
+                    try {
+                        handle.ensureActive()
+                        multipartPutOne(source, active, number, signed.getValue(number), ttl, options, handle) { item ->
+                            progress.record(number, item.uploadedBytes)
+                        }
+                    } finally {
+                        partPermits.release()
                     }
                 })
             }
-            val uploaded = try {
-                List(batch.size) { completed.take().get() }
-            } catch (exc: ExecutionException) {
-                futures.forEach { it.cancel(true) }
-                throw (exc.cause as? Exception ?: exc)
+            val uploaded: List<UploadedPart> = try {
+                val pending = futures.toMutableList()
+                buildList<UploadedPart> {
+                    while (pending.isNotEmpty()) {
+                        handle.ensureActive()
+                        val done = pending.firstOrNull { it.isDone }
+                        if (done == null) {
+                            Thread.sleep(5)
+                        } else {
+                            pending.remove(done)
+                            add(done.get())
+                        }
+                    }
+                }
+            } catch (exc: Exception) {
+                handle.stop()
+                uploadAwaitTasks(futures)
+                val cause = if (exc is ExecutionException) exc.cause as? Exception ?: exc else exc
+                if (cause is InterruptedException) Thread.currentThread().interrupt()
+                throw cause
             }
             uploaded.forEach { part ->
                 attempts += part.attempts
                 active.partMd5[part.number] = part.md5
-                sentByPart[part.number] = part.size
+                progress.record(part.number, part.size, false)
             }
             options.sessionStore.save(sessionKey, active.toMap())
-            reportProgress()
+            progress.emit()
         }
     } finally {
-        pool.shutdownNow()
+        if (handle.isStopped) uploadAwaitTasks(futures)
     }
 
     handle.ensureActive()
@@ -431,9 +474,7 @@ private fun CollectionsResource.multipartUploadLocked(
     handle.ensureActive()
     val done = uploadDone(active.key, source, collectionName, subCollectionName, mode, modality, handle)
     options.sessionStore.remove(sessionKey)
-    sentByPart.keys.forEach { sentByPart[it] = partLength(source.contentLength, active.partSize, it) }
-    lastProgress = source.contentLength
-    reportProgress()
+    progress.complete()
     return multipartResponse(source, active, etag, resumed, attempts, done)
 }
 
@@ -648,8 +689,17 @@ private fun CollectionsResource.uploadAwait(
         )
     }
     val waitMillis = timeoutMillis?.coerceAtMost(Long.MAX_VALUE - 5_000)?.plus(5_000) ?: TimeUnit.HOURS.toMillis(24)
-    if (!latch.await(waitMillis, TimeUnit.MILLISECONDS)) {
-        handle.cancel()
+    val completed = try {
+        latch.await(waitMillis, TimeUnit.MILLISECONDS)
+    } catch (exc: InterruptedException) {
+        handle.stop()
+        handle.awaitQuiescence()
+        Thread.currentThread().interrupt()
+        throw ApiError("signed upload interrupted").also { it.initCause(exc) }
+    }
+    if (!completed) {
+        handle.stop()
+        handle.awaitQuiescence()
         throw ApiError("signed upload timed out")
     }
     handle.ensureActive()
@@ -696,6 +746,78 @@ private fun uploadRetrySleep(handle: UploadHandle, idx: Int) {
 
 private data class UploadedPart(val number: Int, val etag: String, val size: Long, val md5: String, val attempts: Int)
 
+internal class MultipartProgress(
+    private val total: Long,
+    private val handle: UploadHandle,
+    private val observer: (UploadProgress) -> Unit,
+) {
+    private val lock = Any()
+    private val high = mutableMapOf<Int, Long>()
+    private val deliveryOwner = AtomicReference<Thread?>()
+    private val deliveryDepth = ThreadLocal<Boolean>()
+    private var sent = 0L
+
+    fun record(part: Int, value: Long, notify: Boolean = true) {
+        synchronized(lock) {
+            val old = high[part] ?: 0
+            val next = maxOf(old, value.coerceAtLeast(0))
+            if (next > old) {
+                high[part] = next
+                sent += minOf(next - old, total - sent)
+            }
+        }
+        if (notify) deliver()
+    }
+
+    fun emit() = deliver()
+
+    fun complete() {
+        synchronized(lock) { sent = total }
+        deliver()
+    }
+
+    private fun deliver() {
+        if (handle.isStopped) return
+        if (deliveryDepth.get() == true) {
+            if (!handle.isStopped) observer(snapshot())
+            return
+        }
+        val thread = Thread.currentThread()
+        while (!deliveryOwner.compareAndSet(null, thread)) {
+            if (handle.isStopped) return
+            LockSupport.parkNanos(100_000)
+        }
+        try {
+            if (handle.isStopped) return
+            deliveryDepth.set(true)
+            observer(snapshot())
+        } finally {
+            deliveryDepth.remove()
+            deliveryOwner.set(null)
+        }
+    }
+
+    private fun snapshot(): UploadProgress = synchronized(lock) { UploadProgress(sent, total) }
+}
+
+private fun uploadAwaitTasks(futures: List<java.util.concurrent.Future<UploadedPart>>) {
+    val end = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+    futures.forEach { future ->
+        val left = end - System.nanoTime()
+        if (left <= 0) return
+        try {
+            future.get(left, TimeUnit.NANOSECONDS)
+        } catch (_: ExecutionException) {
+        } catch (_: CancellationException) {
+        } catch (_: java.util.concurrent.TimeoutException) {
+            return
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            return
+        }
+    }
+}
+
 private data class MultipartSession(
     val requestId: String,
     val uploadId: String,
@@ -735,6 +857,21 @@ private data class MultipartSession(
     }
 }
 
-private val uploadExecutor = Executors.newCachedThreadPool { task -> Thread(task, "vmodal-upload").apply { isDaemon = true } }
-private val uploadLocks = Array(64) { ReentrantLock() }
+internal val uploadSessionOwners = UploadSessionOwnerRegistry()
 private val PART_RETRY_CODES = setOf(408, 429, 500, 502, 503, 504)
+
+internal data class UploadSessionOwner(val key: String, val generation: Long)
+
+internal class UploadSessionOwnerRegistry {
+    private val next = AtomicLong()
+    private val owners = ConcurrentHashMap<String, UploadSessionOwner>()
+
+    val size: Int get() = owners.size
+
+    fun acquire(key: String): UploadSessionOwner? {
+        val owner = UploadSessionOwner(key, next.incrementAndGet())
+        return if (owners.putIfAbsent(key, owner) == null) owner else null
+    }
+
+    fun release(owner: UploadSessionOwner): Boolean = owners.remove(owner.key, owner)
+}

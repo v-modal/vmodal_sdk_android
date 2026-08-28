@@ -70,6 +70,10 @@ internal fun VmodalTransport.executeWithHandle(
         uploadHandle.ensureActive()
         failure.get()?.let { throw it }
         return result.get() ?: throw ApiError("gateway request returned no result")
+    } catch (exc: InterruptedException) {
+        requestHandle.get()?.cancel()
+        Thread.currentThread().interrupt()
+        throw ApiError("gateway request interrupted").also { it.initCause(exc) }
     } finally {
         requestHandle.get()?.let(uploadHandle::remove)
     }

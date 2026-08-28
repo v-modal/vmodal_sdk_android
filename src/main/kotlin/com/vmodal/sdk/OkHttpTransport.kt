@@ -103,7 +103,8 @@ class OkHttpTransport private constructor(
         val url = validatedHttpUrl(base + request.path + request.queryParameters.toQueryString()).toString().toHttpUrl()
         val method = request.method.uppercase()
         val boundary = "----vmodal-${UUID.randomUUID()}"
-        val body = request.okRequestBody(method, boundary)
+        val multipart = if (request.files.isNotEmpty()) request.multipartPlan(boundary) else null
+        val body = request.okRequestBody(method, multipart)
         return Request.Builder()
             .url(url)
             .header("Accept", "application/json")
@@ -119,10 +120,10 @@ class OkHttpTransport private constructor(
             .build()
     }
 
-    private fun VmodalRequest.okRequestBody(method: String, boundary: String): RequestBody? {
+    private fun VmodalRequest.okRequestBody(method: String, multipart: MultipartPlan?): RequestBody? {
         if (method in setOf("GET", "HEAD")) return null
         return when {
-            files.isNotEmpty() -> MultipartRequestBody(this, boundary)
+            multipart != null -> MultipartRequestBody(multipart)
             formFields.isNotEmpty() -> formFields.toQueryString(true)
                 .toRequestBody("application/x-www-form-urlencoded".toMediaType())
             jsonBody != null -> VmodalJson.stringify(jsonBody).toRequestBody("application/json".toMediaType())
@@ -150,12 +151,12 @@ class OkHttpTransport private constructor(
 }
 
 private class MultipartRequestBody(
-    private val request: VmodalRequest,
-    private val boundary: String,
+    private val plan: MultipartPlan,
 ) : RequestBody() {
-    override fun contentType(): MediaType = "multipart/form-data; boundary=$boundary".toMediaType()
+    override fun contentType(): MediaType = "multipart/form-data; boundary=${plan.boundary}".toMediaType()
+    override fun contentLength(): Long = plan.contentLength
 
     override fun writeTo(sink: BufferedSink) {
-        request.writeMultipart(sink.outputStream(), boundary)
+        plan.writeTo(sink.outputStream())
     }
 }

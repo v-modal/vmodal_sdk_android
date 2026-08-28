@@ -91,6 +91,13 @@ signed requests. Failure terminates the Flow with the original typed SDK
 error. `CancellationException` stays cancellation and must be rethrown when a
 caller catches broad exceptions.
 
+High-level uploads use bounded orchestration and data lanes. Queue saturation
+closes the suspend/Flow operation with `ValidationFailed` before any gateway or
+source work starts. Direct low-level or injected signed-upload transports are
+not covered by this high-level admission bound. A duplicate exact multipart
+session also fails immediately with `ValidationFailed`; it never waits for or
+joins the current owner.
+
 Do not collect the same cold Flow twice unless two uploads are intended. If
 several UI consumers need one operation, collect it once in an app-owned scope
 and publish app state with `stateIn`, `shareIn`, or a repository-owned

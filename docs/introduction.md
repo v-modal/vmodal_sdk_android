@@ -49,7 +49,7 @@ The release coordinate is:
 
 ```kotlin
 dependencies {
-    implementation("com.vmodal:vmodal-sdk-android:2.0.0")
+    implementation("com.vmodal:vmodal-sdk-android:2.0.1")
 }
 ```
 

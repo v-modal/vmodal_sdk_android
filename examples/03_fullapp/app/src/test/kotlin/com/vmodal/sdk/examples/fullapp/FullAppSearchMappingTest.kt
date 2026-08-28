@@ -33,12 +33,13 @@ class FullAppSearchMappingTest {
                 candidates.single().record,
             )
         }
-        val omitted = searchCandidates(
+        val titleFallback = searchCandidates(
             listOf(mapOf("filename" to " / "), mapOf("title" to "No file")),
             "group",
             "stream",
         )
-        assertTrue(omitted.isEmpty())
+        assertEquals("No file", titleFallback.single().record["filename"])
+        assertEquals(1, titleFallback.single().searchRank)
         val timed = searchCandidates(
             listOf(
                 mapOf(
@@ -70,7 +71,6 @@ class FullAppSearchMappingTest {
                 mapOf(
                     "stream" to "astream",
                     "item_id" to "astream-video_10frames-0000000002000",
-                    "title" to "video_10frames",
                     "ts_unix" to "0000000002000",
                 ),
             ),
@@ -148,9 +148,10 @@ class FullAppSearchMappingTest {
                 mapOf("url_pre_signed" to "https://image.test/outside"),
             ),
         )
-        assertEquals(listOf("First", "Second"), images.map(SearchImage::title))
-        assertTrue(images[0].id.startsWith("1-same.mp4-"))
-        assertTrue(images[1].id.startsWith("2-same.mp4-"))
+        assertEquals(listOf("Filtered", "First", "Second"), images.map(SearchImage::title))
+        assertTrue(images[0].id.startsWith("0-Filtered-"))
+        assertTrue(images[1].id.startsWith("1-same.mp4-"))
+        assertTrue(images[2].id.startsWith("2-same.mp4-"))
         images.forEach { image -> assertFalse(image.id.contains(image.url)) }
     }
 
