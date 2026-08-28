@@ -2,6 +2,19 @@ package com.vmodal.sdk
 
 import java.io.IOException
 
+private val SERVER_FILE_URI_PATTERN = Regex(
+    """(?i)\bfile:(?://+)?(?:[a-z]:[\\/]|/)[^\s\"'<>]+""",
+)
+private val SERVER_QUOTED_PATH_PATTERN = Regex(
+    """(?<=['\"])(?:[a-zA-Z]:[\\/]|/|\\\\)[^'\"\r\n]+(?=['\"])""",
+)
+private val SERVER_WINDOWS_PATH_PATTERN = Regex(
+    """(?i)(?<![a-z0-9])(?:[a-z]:[\\/][^\s\"'<>]+|\\\\[^\\/\s\"'<>]+[\\/][^\s\"'<>]+)""",
+)
+private val SERVER_UNIX_PATH_PATTERN = Regex(
+    """(?<![a-zA-Z0-9:/])/[^\s\"'<>]+""",
+)
+
 /**
  * Base SDK failure with optional status and structured diagnostic details.
  *
@@ -58,3 +71,20 @@ class ResponseTooLarge(
 
 /** Structured response content could not be decoded. */
 class MalformedResponse(message: String = "malformed JSON response") : SdkError(message)
+
+internal fun redactServerErrorValue(value: Any?): Any? = when (value) {
+    is String -> strRedactServerPaths(value)
+    is Map<*, *> -> value.entries.associate { entry ->
+        strRedactServerPaths(entry.key.toString()) to redactServerErrorValue(entry.value)
+    }
+    is Iterable<*> -> value.map(::redactServerErrorValue)
+    is Array<*> -> value.map(::redactServerErrorValue)
+    else -> value
+}
+
+internal fun strRedactServerPaths(value: String): String {
+    var out = SERVER_FILE_URI_PATTERN.replace(value, "****")
+    out = SERVER_QUOTED_PATH_PATTERN.replace(out, "****")
+    out = SERVER_WINDOWS_PATH_PATTERN.replace(out, "****")
+    return SERVER_UNIX_PATH_PATTERN.replace(out, "****")
+}

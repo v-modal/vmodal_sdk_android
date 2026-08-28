@@ -323,7 +323,8 @@ class VmodalHttp(
             ?.value?.joinToString(";").orEmpty()
         val looksJson = "json" in contentType.lowercase() || response.body.trimStart().startsWith('{') ||
             response.body.trimStart().startsWith('[')
-        val body = if (response.body.isEmpty()) null else if (looksJson) response.json else response.body
+        val rawBody = if (response.body.isEmpty()) null else if (looksJson) response.json else response.body
+        val body = redactServerErrorValue(rawBody)
         when (response.statusCode) {
             401 -> throw AuthError("authentication failed", statusCode = 401, body = body)
             422 -> throw ValidationFailed(

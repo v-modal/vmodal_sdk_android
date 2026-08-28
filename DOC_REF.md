@@ -87,11 +87,14 @@ and `UploadConditions` without reading Android platform state itself.
 
 - `AuthError` asks the caller to renew or replace credentials.
 - `ValidationFailed` identifies invalid local input or rejected request data.
-- `ApiError` preserves service status and response details for diagnostics.
+- `ApiError` preserves service status and sanitized response details for diagnostics.
 - `FeatureDisabled` is deterministic and should not be retried.
 - `TransportError` wraps connectivity failures.
 - `ResponseTooLarge` protects bounded response reads.
 - `MalformedResponse` identifies invalid structured response content.
+
+Server-originated `SdkError.body` and `SdkError.details` keep useful response
+structure, but filesystem paths are replaced with `****` before reaching the app.
 
 ## Low-level extension points
 

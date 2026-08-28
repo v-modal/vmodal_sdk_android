@@ -305,7 +305,11 @@ class OkHttpSignedUploadTransport(
                             val bytes = errBody?.byteStream()?.use { input ->
                                 input.bytesBounded(errBody.contentLength(), ERROR_RESPONSE_LIMIT_BYTES)
                             } ?: ByteArray(0)
-                            ApiError("signed upload failed", response.code, bytes.toString(StandardCharsets.UTF_8))
+                            ApiError(
+                                "signed upload failed",
+                                response.code,
+                                strRedactServerPaths(bytes.toString(StandardCharsets.UTF_8)),
+                            )
                         } catch (exc: Exception) {
                             exc
                         }

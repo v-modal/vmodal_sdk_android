@@ -232,6 +232,8 @@ downstream service independently authenticates identity.
 - Redirects are not followed.
 - JSON/text responses are bounded to 8 MiB, errors to 1 MiB, and binary
   responses to 64 MiB.
+- Server error bodies keep their useful structure, but filesystem paths are
+  replaced with `****` before an `SdkError` reaches application code.
 - Presigned uploads never receive the VModal bearer credential or identity
   headers.
 
