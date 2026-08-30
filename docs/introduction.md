@@ -49,14 +49,14 @@ The release coordinate is:
 
 ```kotlin
 dependencies {
-    implementation("com.vmodal:vmodal-sdk-android:2.0.1")
+    implementation("com.vmodal:vmodal-sdk-android:2.0.2")
 }
 ```
 
 Keep `mavenCentral()` in `dependencyResolutionManagement`. Maven Central
-publication is still pending, so current adopters should clone the
-[public SDK repository](https://github.com/v-modal/vmodal_sdk_android) beside
-their app and include the source project:
+publication is handled by the release workflow. For local source development,
+clone the [public SDK repository](https://github.com/v-modal/vmodal_sdk_android)
+beside the app and include the source project:
 
 ```kotlin
 // settings.gradle.kts

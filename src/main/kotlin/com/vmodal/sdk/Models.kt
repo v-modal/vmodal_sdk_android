@@ -492,6 +492,14 @@ class VideoUploadResponse(raw: Map<String, Any?>) : JsonBackedResponse(raw) {
     val attemptCount = raw["attempt_count"].asInt()
     /** Normalized destination path. */
     val destPath = raw["dest_path"]?.toString().orEmpty()
+    /** Canonical CCTV filename accepted by finalize. */
+    val videoFilename = raw["video_filename"]?.toString().orEmpty()
+    /** Offset-aware CCTV footage origin accepted by finalize. */
+    val startDatetimeUser = raw["start_datetime_user"]?.toString().orEmpty()
+    /** Canonical UTC epoch-millisecond footage origin. */
+    val startTsUnixUserMs = raw["start_ts_unix_user_ms"].asLong()
+    /** Timestamp provenance returned by finalize. */
+    val timestampSource = raw["timestamp_source"]?.toString().orEmpty()
     /** Whether the source was transcoded before upload. */
     val reduceSize = raw["reduce_size"] as? Boolean ?: false
     /** Original local file path, present when a transcoder ran. */

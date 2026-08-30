@@ -4,7 +4,7 @@
       <verify-metadata>true</verify-metadata>
       <verify-signatures>false</verify-signatures>
       <trusted-artifacts>
-         <trust group="com.vmodal" name="vmodal-sdk-android" version="2.0.1" reason="Built from the checksummed candidate commit in an isolated CI repository"/>
+         <trust group="com.vmodal" name="vmodal-sdk-android" version="2.0.2" reason="Built from the checksummed candidate commit in an isolated CI repository"/>
       </trusted-artifacts>
    </configuration>
    <components>

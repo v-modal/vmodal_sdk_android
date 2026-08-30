@@ -24,6 +24,11 @@ import java.util.concurrent.atomic.AtomicReference
  * @property resume whether to resume a compatible checkpoint
  * @property sessionStore multipart checkpoint store
  * @property adaptiveConditions optional platform conditions for adaptive tuning
+ * @property videoFilename canonical CCTV filename sent when finalizing the upload
+ * @property metadataText optional metadata text sent when finalizing the upload
+ * @property metadataTags optional metadata tags sent when finalizing the upload
+ * @property startDatetimeUser offset-aware CCTV footage start time
+ * @property reProcess whether the uploaded video should be processed again
  */
 data class VideoUploadOptions(
     val multipart: Boolean = false,
@@ -36,6 +41,11 @@ data class VideoUploadOptions(
     val resume: Boolean = true,
     val sessionStore: UploadSessionStore = UploadSessionStores.memory,
     val adaptiveConditions: UploadConditions? = null,
+    val videoFilename: String? = null,
+    val metadataText: String? = null,
+    val metadataTags: List<String>? = null,
+    val startDatetimeUser: String? = null,
+    val reProcess: Boolean = false,
 ) {
     /**
      * Pre-upload transcoder. The default performs no transcoding. An Android app injects its own
@@ -225,7 +235,7 @@ private fun CollectionsResource.videoUploadRun(
             ).also { it.addSuppressed(exc) }
         }
     } else {
-        singleUpload(source, collectionName, subCollectionName, mode, modality, ttl, handle, onProgress)
+        singleUpload(source, collectionName, subCollectionName, mode, modality, ttl, options, handle, onProgress)
     }
 }
 
@@ -258,7 +268,10 @@ private fun CollectionsResource.transcodeThenUpload(
     val uploadSource = if (produced) UploadSource.fromFile(result.output, source.contentType) else source
     // A bare copy() resets the (non-constructor) transcoder to the passthrough default, so the
     // recursive run uploads the reduced file directly instead of transcoding again.
-    val inner = options.copy().resolvedFor(uploadSource.contentLength)
+    val inner = options.copy(
+        videoFilename = options.videoFilename
+            ?: if (options.startDatetimeUser != null) source.fileName else null,
+    ).resolvedFor(uploadSource.contentLength)
     inner.validate(uploadSource.contentLength)
     val uploaded = videoUploadRun(uploadSource, collectionName, subCollectionName, mode, modality, ttl, inner, handle, onProgress)
     var deleted = false
@@ -285,6 +298,7 @@ private fun CollectionsResource.singleUpload(
     mode: String,
     modality: String,
     ttl: Int,
+    options: VideoUploadOptions,
     handle: UploadHandle,
     onProgress: (UploadProgress) -> Unit,
 ): VideoUploadResponse {
@@ -295,7 +309,10 @@ private fun CollectionsResource.singleUpload(
         params = uploadParams(source, collectionName, subCollectionName, mode, modality, ttl),
     )
     val result = uploadAwait(source, signed["url"]?.toString().orEmpty(), signed["method"]?.toString() ?: "PUT", handle = handle, onProgress = onProgress)
-    val done = uploadDone(signed["key"]?.toString().orEmpty(), source, collectionName, subCollectionName, mode, modality, handle)
+    val done = uploadDone(
+        signed["key"]?.toString().orEmpty(), source, collectionName,
+        subCollectionName, mode, modality, options, handle,
+    )
     val raw = linkedMapOf<String, Any?>().apply {
         putAll(signed)
         put("filename", source.fileName)
@@ -309,6 +326,10 @@ private fun CollectionsResource.singleUpload(
         put("attempt_count", 1)
         put("upload_done", done)
         put("dest_path", done["dest_path"]?.toString().orEmpty())
+        put("video_filename", done["video_filename"])
+        put("start_datetime_user", done["start_datetime_user"])
+        put("start_ts_unix_user_ms", done["start_ts_unix_user_ms"])
+        put("timestamp_source", done["timestamp_source"])
     }
     return VideoUploadResponse(raw)
 }
@@ -375,7 +396,10 @@ private fun CollectionsResource.multipartUploadOwned(
             throw ApiError("completed multipart status does not match local upload contract")
         }
         handle.ensureActive()
-        val done = uploadDone(active.key, source, collectionName, subCollectionName, mode, modality, handle)
+        val done = uploadDone(
+            active.key, source, collectionName, subCollectionName,
+            mode, modality, options, handle,
+        )
         options.sessionStore.remove(sessionKey)
         return multipartResponse(source, active, status["etag"]?.toString().orEmpty(), resumed = resumed, attempts = 0, done = done)
     }
@@ -472,7 +496,10 @@ private fun CollectionsResource.multipartUploadOwned(
     val etag = complete["etag"]?.toString().orEmpty()
     if (etag.isBlank()) throw ApiError("multipart complete response returned no ETag")
     handle.ensureActive()
-    val done = uploadDone(active.key, source, collectionName, subCollectionName, mode, modality, handle)
+    val done = uploadDone(
+        active.key, source, collectionName, subCollectionName,
+        mode, modality, options, handle,
+    )
     options.sessionStore.remove(sessionKey)
     progress.complete()
     return multipartResponse(source, active, etag, resumed, attempts, done)
@@ -636,6 +663,10 @@ private fun multipartResponse(
     "attempt_count" to attempts,
     "upload_done" to done,
     "dest_path" to done["dest_path"]?.toString().orEmpty(),
+    "video_filename" to done["video_filename"],
+    "start_datetime_user" to done["start_datetime_user"],
+    "start_ts_unix_user_ms" to done["start_ts_unix_user_ms"],
+    "timestamp_source" to done["timestamp_source"],
 ))
 
 private fun CollectionsResource.uploadDone(
@@ -645,10 +676,31 @@ private fun CollectionsResource.uploadDone(
     stream: String,
     mode: String,
     modality: String,
+    options: VideoUploadOptions,
     handle: UploadHandle,
-) = http.requestUpload("POST", Routes.full(Routes.externalUploadDone), handle, params = mapOf(
-        "key" to key, "mode" to mode, "group_name" to collection, "stream_name" to stream, "modality" to modality, "filename" to source.fileName,
-    ))
+) = http.requestUpload(
+    "POST",
+    Routes.full(Routes.externalUploadDone),
+    handle,
+    params = linkedMapOf<String, Any?>(
+        "key" to key,
+        "mode" to mode,
+        "group_name" to collection,
+        "stream_name" to stream,
+        "modality" to modality,
+        "filename" to source.fileName,
+        "re_process" to options.reProcess,
+    ).apply {
+        val videoName = options.videoFilename
+            ?: if (options.startDatetimeUser != null) source.fileName else null
+        if (videoName != null) put("video_filename", videoName)
+        if (options.metadataText != null) put("metadata_text", options.metadataText)
+        if (options.metadataTags != null) put("metadata_tags", options.metadataTags)
+        if (options.startDatetimeUser != null) {
+            put("start_datetime_user", options.startDatetimeUser)
+        }
+    },
+)
 
 private fun CollectionsResource.multipartStatus(session: MultipartSession, handle: UploadHandle) =
     http.requestUpload("GET", Routes.full(Routes.externalUploadMultipartStatus), handle, params = mapOf("request_id" to session.requestId, "upload_id" to session.uploadId, "key" to session.key))
