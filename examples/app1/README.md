@@ -55,5 +55,3 @@ clip (your own footage keeps licensing trivial) — the app also offers
 - The API key is entered at runtime only; nothing is persisted.
 - Defaults (`app1_kitchen` / `main`) are just suggestions — use any
   collection and stream your key may create.
-- The search footer prints a debug line (rows / candidates / urls / images)
-  to make mapping issues easy to diagnose.
