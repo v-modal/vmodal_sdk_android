@@ -22,6 +22,13 @@ The app uses the same source-SDK/Maven-consumer switch as `examples/03_fullapp`.
 By default it includes the SDK project at `uinterface/sdk_android`; Maven mode
 is opt-in and never falls back to an unrelated global artifact.
 
+## Demo
+
+<img width="271" height="537" alt="image" src="https://github.com/user-attachments/assets/8a7040b9-02b7-49de-948f-953ea59c1bb6" />
+
+<img width="275" height="533" alt="image" src="https://github.com/user-attachments/assets/bc2cb863-77f5-4aa1-95d6-0879bad6af74" />
+
+
 ## Build and run
 
 From this directory, build without credentials or network API calls:
