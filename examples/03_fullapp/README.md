@@ -3,10 +3,10 @@
 # VModal Android full search application
 
 
-1. Configure the SDK with a runtime API key.
-2. Resolve the authenticated identity and list its video collections.
-3. Reuse an existing collection or upload the bundled 10-frame sample.
-4. Create an image index and refresh its asynchronous job status.
+1. Connect with a runtime API key; the app verifies it and loads collections.
+2. Keep the generated demo collection or enter an existing visible collection.
+3. Upload the bundled 10-frame sample or a video selected from Android.
+4. Create an image index; the app waits for the asynchronous job automatically.
 5. Search the indexed collection and inspect ranked frames in a responsive
    image grid.
 
@@ -35,8 +35,8 @@ network, or API error.
 
 ## What you need
 
-- Android Studio with Android SDK 34
-- JDK 17
+- Android Studio with Android SDK Platform 34
+- JDK 17 (the command-line wrapper selects an installed JDK 17 automatically)
 - An Android device or emulator running Android 7.0 (API 24) or newer
 - A valid VModal runtime API key supplied by your authenticated application or
   VModal administrator
@@ -47,46 +47,49 @@ coroutines, `StateFlow`, lifecycle-aware Compose state collection, and Coil
 
 > Never commit an API key, put it in Android resources, `BuildConfig`, Gradle
 > properties, `local.properties`, the manifest, logs, or a deep link. This app
-> accepts the key at runtime, clears the input after configuration, and keeps
-> the credential only in `MutableApiKeyProvider` memory.
+> accepts the key at runtime, clears the input after a successful connection,
+> and keeps the credential only in `MutableApiKeyProvider` memory.
 
 ## Run from Android Studio
 
-1. Open `uinterface/sdk_android/examples/03_fullapp` as the project.
-2. Allow Gradle to sync and install any requested Android SDK 34 components.
-3. Select the `app` run configuration.
-4. Start an API 24+ emulator or connect an Android device.
-5. Run **VModal Full Search**.
+1. In Android Studio, set **Settings > Build Tools > Gradle > Gradle JDK** to
+   JDK 17. Do this before the first sync; newer bundled JBR versions are not
+   compatible with the pinned Gradle 8.6 build.
+2. Open `uinterface/sdk_android/examples/03_fullapp` as the project.
+3. Allow Gradle to sync and install Android SDK Platform 34 if requested.
+4. Select the `app` run configuration.
+5. Start an API 24+ emulator or connect an Android device.
+6. Run **VModal Full Search**.
 
 The settings include the SDK source project from `../..`, so local SDK changes
 are available to the app after a Gradle rebuild.
 
 ## Build or install from the command line
 
-From this directory:
+Clone the complete public SDK repository, then run one install command:
 
 ```bash
-./gradlew --no-daemon :app:assembleDebug
-```
-
-The lightweight launcher delegates to the reviewed Gradle 8.6 wrapper already
-stored in `../02_search`; both examples therefore use the same pinned wrapper
-binary. The debug APK is created under `app/build/outputs/apk/debug/`.
-
-To install it on a connected device or running emulator:
-
-```bash
+git clone https://github.com/v-modal/vmodal_sdk_android.git
+cd vmodal_sdk_android/examples/03_fullapp
 ./gradlew --no-daemon :app:installDebug
 ```
 
-Check device visibility with `adb devices`, then open **VModal Full Search**
-from the Android launcher.
+The example has its own reviewed Gradle 8.6 wrapper. It automatically selects a
+locally installed JDK 17 and the standard Android SDK location on macOS, Linux,
+or Windows. If a required tool is missing, it stops before Gradle with a direct
+install/setup instruction. The first build downloads dependencies and compiles
+the SDK source, so it can take a few minutes; later builds reuse the cache. The
+debug APK is written under `app/build/outputs/apk/debug/`.
 
-## 1. Configure the client
+The example intentionally consumes the SDK source at `../..`. Clone the whole
+repository; copying only `03_fullapp` is not a supported source build. Check
+device visibility with `adb devices`, then open **VModal Full Search**.
+
+## 1. Connect and verify the key
 
 1. Paste a current credential into **Runtime API key**.
-2. Tap **Configure client**.
-3. Confirm that the status asks you to resolve identity.
+2. Tap **Connect and verify key**.
+3. Continue only after the app says it is connected and collections are loaded.
 
 The app creates the public-gateway client with an in-memory provider:
 
@@ -98,22 +101,27 @@ val client = Client(
 )
 ```
 
-Configuration itself does not prove that the key is valid. Continue to the
-identity request before testing collection, upload, index, or search behavior.
-
-## 2. Resolve identity and collections
-
-Tap **Resolve auth.me**. The application calls:
+Client construction does not validate a key, so the same Connect action
+immediately calls:
 
 ```kotlin
 val me = client.auth.me()
 val groups = client.collections.listGroups("vid_file")
 ```
 
-Do not continue after an authentication error. On success, the screen displays
-the profile type and the sorted video collections visible to that key. If the
-suggested `android_example` collection is not visible and the account already
-has collections, the first returned collection is selected.
+On success, the app rebuilds the immutable client with the resolved identity,
+loads collections, marks the session connected, and clears the visible key
+field. On failure it destroys the client, keeps the key editable, and explains
+whether to replace the key, correct input, check connectivity, wait after a
+rate limit, or retry a temporary server failure.
+
+## 2. Choose the collection and stream
+
+The app generates a new name such as `android_demo_2f04bc191a` on startup. Keep
+it for the bundled demo so data from a shared beta credential does not collide
+with another run. To search existing data, enter a collection shown in the
+bounded five-name preview. The complete list remains available internally and
+can be refreshed with **Refresh collections**.
 
 Use **Refresh collections** whenever another upload or client may have changed
 the account. Collection access is credential-scoped: a name from another
@@ -152,10 +160,10 @@ To use it:
 5. Use **Cancel** to cancel an active upload. The sample is small and may finish
    before cancellation can be tapped.
 
-The suggested new-data scope is:
+One generated new-data scope looks like:
 
 ```text
-collection: android_example
+collection: android_demo_2f04bc191a
 stream:     astream
 ```
 
@@ -189,10 +197,9 @@ or result from one scope is not accidentally presented as belonging to another.
 
 After an upload, or when an existing collection has no ready image index:
 
-1. Tap **Create index**.
-2. Note the returned job ID and initial state.
-3. Tap **Refresh status** periodically.
-4. Continue when the state is `success`, `completed`, `done`, or `ok`.
+1. Tap **Create index and wait**.
+2. Watch the returned job ID and live queued/running state.
+3. Continue when the app reports **Index is ready**.
 
 The index request uses the same Collection and Stream as upload:
 
@@ -206,10 +213,11 @@ val job = client.indexes.createIndex(
 )
 ```
 
-Index creation is asynchronous. A successful submit response means the job was
-accepted, not that the collection is ready. The refresh action calls
-`client.indexes.indexStatus(jobId)` and leaves polling cadence under the user's
-control, as in the Flutter example.
+Index creation is asynchronous. A successful submit response means only that
+the job was accepted. The app polls `client.indexes.indexStatus(jobId)` every
+five seconds, stops on recognized success or failure states, and times out
+after ten minutes with a retry instruction. Scope, credential, and lifecycle
+changes cancel the wait.
 
 <a id="fullapp-search"></a>
 
@@ -288,7 +296,8 @@ used as card IDs, persisted, or logged.
 ## Credential and lifecycle behavior
 
 - The API-key field uses ordinary in-memory Compose state, not saved state.
-- **Configure client** clears the visible key field after injection.
+- **Connect and verify key** clears the visible key only after `auth.me()` and
+  collection loading succeed.
 - **Forget API key** cancels ViewModel-owned work, clears the provider and
   client, restores the bundled sample, and resets the workflow.
 - Replacing the key clears identity, collection, upload, index, and result state.
@@ -367,10 +376,10 @@ Install Android SDK 34 in Android Studio and either open the project there or
 set `ANDROID_HOME`/`ANDROID_SDK_ROOT` for the command-line shell. Do not commit
 the machine-specific `local.properties` file.
 
-### `Configure the client first`
+### `Connect and verify the key first`
 
-Enter a runtime key and tap **Configure client** before invoking identity,
-collection, upload, index, or search operations.
+Enter a runtime key and tap **Connect and verify key** before collection,
+upload, index, or search operations.
 
 ### Authentication or network error
 
@@ -386,9 +395,10 @@ known size.
 
 ### Index remains queued or running
 
-Indexing is asynchronous and can take several minutes. Keep the job ID and tap
-**Refresh status** again. For production UX, poll with an explicit backoff and
-timeout policy or restore the job later through `jobsList()`.
+Indexing is asynchronous and can take several minutes. The app waits for up to
+ten minutes. After a reported failure or timeout, confirm the collection and
+stream, then tap **Create index and wait** again. A production app can restore
+the job later through `jobsList()`.
 
 ### Search says the collection is unavailable
 

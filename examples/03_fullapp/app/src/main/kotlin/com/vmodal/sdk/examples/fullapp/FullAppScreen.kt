@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +68,9 @@ fun FullAppScreen(vm: FullAppViewModel) {
     val focus = LocalFocusManager.current
     var apiKey by remember { mutableStateOf("") }
     val busy = state.action != null
+    LaunchedEffect(state.configured) {
+        if (state.configured) apiKey = ""
+    }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             runCatching { contentUriUploadSource(context.applicationContext, uri) }
@@ -95,7 +99,7 @@ fun FullAppScreen(vm: FullAppViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    SectionTitle("1. Configure and authenticate")
+                    SectionTitle("1. Connect")
                     OutlinedTextField(
                         value = apiKey,
                         onValueChange = { apiKey = it },
@@ -108,34 +112,18 @@ fun FullAppScreen(vm: FullAppViewModel) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     )
                     Button(
-                        onClick = {
-                            val hasKey = apiKey.trim().isNotEmpty()
-                            vm.configure(apiKey)
-                            if (hasKey) apiKey = ""
-                        },
+                        onClick = { vm.connect(apiKey) },
                         enabled = !busy,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Configure client")
+                        Text(if (state.action == FullAppAction.CONNECT) "Connecting…" else "Connect and verify key")
                     }
-                    Row(
+                    OutlinedButton(
+                        onClick = vm::refreshCollections,
+                        enabled = !busy && state.configured,
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Button(
-                            onClick = vm::resolveIdentity,
-                            enabled = !busy && state.configured,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text("Resolve auth.me")
-                        }
-                        OutlinedButton(
-                            onClick = vm::refreshCollections,
-                            enabled = !busy && state.configured,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text("Refresh collections")
-                        }
+                        Text("Refresh collections")
                     }
                 }
             }
@@ -157,11 +145,7 @@ fun FullAppScreen(vm: FullAppViewModel) {
                     )
                     if (state.collectionsLoaded) {
                         Text(
-                            if (state.collections.isEmpty()) {
-                                "Available collections: none"
-                            } else {
-                                "Available collections: ${state.collections.joinToString()}"
-                            },
+                            strCollectionSummary(state.collections),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -216,7 +200,7 @@ fun FullAppScreen(vm: FullAppViewModel) {
                     ) {
                         Button(
                             onClick = vm::upload,
-                            enabled = !busy,
+                            enabled = !busy && state.configured,
                             modifier = Modifier.weight(1f),
                         ) {
                             Text(if (state.action == FullAppAction.UPLOAD) "Uploading…" else "Upload")
@@ -240,24 +224,12 @@ fun FullAppScreen(vm: FullAppViewModel) {
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     SectionTitle("4. Create and inspect the index")
-                    Row(
+                    Button(
+                        onClick = vm::createIndex,
+                        enabled = !busy && state.configured,
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Button(
-                            onClick = vm::createIndex,
-                            enabled = !busy,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text("Create index")
-                        }
-                        OutlinedButton(
-                            onClick = vm::refreshIndex,
-                            enabled = !busy && state.indexJobId.isNotBlank(),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text("Refresh status")
-                        }
+                        Text(if (state.action == FullAppAction.INDEX_STATUS) "Waiting for index…" else "Create index and wait")
                     }
                     Text(
                         "Index: ${state.indexStatus}${state.indexJobId.takeIf { it.isNotBlank() }?.let { " ($it)" }.orEmpty()}",
@@ -291,7 +263,7 @@ fun FullAppScreen(vm: FullAppViewModel) {
                             focus.clearFocus()
                             vm.search()
                         },
-                        enabled = !busy,
+                        enabled = !busy && state.configured,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         if (state.action == FullAppAction.SEARCH) {

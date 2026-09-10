@@ -147,10 +147,10 @@ class FullAppSearchGridTest {
             }
         }
 
-        assertStacked("1. Configure and authenticate", "Runtime API key", "Configure client", "Resolve auth.me")
+        assertStacked("1. Connect", "Runtime API key", "Connect and verify key", "Refresh collections")
         assertSection("2. Select the data scope", "Collection", "Stream")
         assertSection("3. Upload a video", "Selected: video_10frames.mp4", "Use sample", "Upload")
-        assertSection("4. Create and inspect the index", "Create index", "Index: not started")
+        assertSection("4. Create and inspect the index", "Create index and wait", "Index: not started")
         assertSection("5. Search", "Search query", "Search")
 
         compose.onNodeWithTag("full-app-grid").performScrollToNode(hasText("Forget API key"))

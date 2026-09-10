@@ -1,5 +1,11 @@
 package com.vmodal.sdk.examples.fullapp
 
+import com.vmodal.sdk.ApiError
+import com.vmodal.sdk.AuthError
+import com.vmodal.sdk.FeatureDisabled
+import com.vmodal.sdk.TransportError
+import com.vmodal.sdk.ValidationFailed
+import java.io.IOException
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -199,5 +205,73 @@ class FullAppSearchMappingTest {
         assertTrue(values[0].bytes.isEmpty())
         assertTrue(values[1].bytes.contentEquals(byteArrayOf(1, 2, 3)))
         assertEquals(listOf("zero", "one"), values.map(SearchImage::title))
+    }
+
+    @Test
+    fun demoCollectionsAreUniqueSafeAndSummarized() {
+        val first = strNewDemoCollection()
+        val second = strNewDemoCollection()
+        assertTrue(first.matches(Regex("^android_demo_[a-f0-9]{10}$")))
+        assertTrue(first.length <= 60)
+        assertTrue(first != second)
+
+        val names = List(200) { "collection_$it" }
+        val summary = strCollectionSummary(names)
+        assertTrue(summary.startsWith("200 existing video collection(s):"))
+        assertTrue("collection_0" in summary)
+        assertTrue("collection_4" in summary)
+        assertFalse("collection_5," in summary)
+        assertTrue("and 195 more" in summary)
+        assertTrue("No existing video collections" in strCollectionSummary(emptyList()))
+    }
+
+    @Test
+    fun indexStatusesHaveExplicitTerminalClasses() {
+        listOf("success", "SUCCEEDED", " done ", "completed", "ok").forEach {
+            assertTrue(strIndexDone(it))
+            assertFalse(strIndexFailed(it))
+        }
+        listOf(
+            "failed",
+            "failure",
+            "error",
+            "cancelled",
+            "canceled",
+            "dead_letter",
+            "timeout",
+            "timed_out",
+            "expired",
+        ).forEach {
+            assertTrue(strIndexFailed(it))
+            assertFalse(strIndexDone(it))
+        }
+        listOf("queued", "running", "unknown", "").forEach {
+            assertFalse(strIndexDone(it))
+            assertFalse(strIndexFailed(it))
+        }
+    }
+
+    @Test
+    fun typedErrorsAreActionableAndRedacted() {
+        val secret = "secret-key-or-url"
+        val errors = listOf(
+            strFullAppError(AuthError(secret, 401, secret), "demo"),
+            strFullAppError(ValidationFailed("collectionName is required"), "demo"),
+            strFullAppError(TransportError(IOException(secret)), "demo"),
+            strFullAppError(FeatureDisabled(secret), "demo"),
+            strFullAppError(ApiError(secret, 404, mapOf("detail" to "missing lancedb $secret")), "demo"),
+            strFullAppError(ApiError(secret, 404, secret), "demo"),
+            strFullAppError(ApiError(secret, 429, secret), "demo"),
+            strFullAppError(ApiError(secret, 503, secret), "demo"),
+        )
+        errors.forEach { message -> assertFalse(secret in message) }
+        assertTrue("API key rejected" in errors[0])
+        assertTrue("Invalid input" in errors[1])
+        assertTrue("internet connection" in errors[2])
+        assertTrue("not available" in errors[3])
+        assertTrue("No searchable index" in errors[4])
+        assertTrue("Collection or resource not found" in errors[5])
+        assertTrue("rate limit" in errors[6])
+        assertTrue("temporarily unavailable" in errors[7])
     }
 }

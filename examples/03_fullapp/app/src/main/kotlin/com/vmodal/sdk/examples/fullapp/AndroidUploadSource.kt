@@ -41,8 +41,13 @@ fun contentUriUploadSource(context: Context, uri: Uri): UploadSource {
     if (contentLength < 0) {
         contentLength = resolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
     }
-    require(fileName.isNotBlank()) { "The selected video has no display name." }
-    require(contentLength > 0) { "The selected video provider did not report a non-empty size." }
+    require(fileName.isNotBlank()) {
+        "The selected provider did not return a filename. Choose a local video or use the bundled sample."
+    }
+    require(contentLength > 0) {
+        "The selected provider did not return the video size required for upload. " +
+            "Download the video locally or use the bundled sample."
+    }
 
     return UploadSource(
         fileName = fileName,
@@ -50,6 +55,7 @@ fun contentUriUploadSource(context: Context, uri: Uri): UploadSource {
         contentType = resolver.getType(uri) ?: "application/octet-stream",
         sourceId = uri.toString(),
     ) {
-        resolver.openInputStream(uri) ?: error("Cannot open the selected video.")
+        resolver.openInputStream(uri)
+            ?: error("The selected video cannot be opened. Choose it again or use the bundled sample.")
     }
 }

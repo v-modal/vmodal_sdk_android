@@ -17,7 +17,6 @@ android {
     }
 
     sourceSets["main"].assets.srcDir("../asset")
-    sourceSets["main"].kotlin.srcDir("../../01_starter/src/main/kotlin")
 
     buildFeatures {
         compose = true

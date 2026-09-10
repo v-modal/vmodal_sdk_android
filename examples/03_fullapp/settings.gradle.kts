@@ -1,3 +1,8 @@
+check(JavaVersion.current() == JavaVersion.VERSION_17) {
+    "VModal Full Search requires JDK 17, but Gradle is using ${System.getProperty("java.version")}. " +
+        "In Android Studio, set Settings > Build Tools > Gradle > Gradle JDK to 17."
+}
+
 pluginManagement {
     repositories {
         google()

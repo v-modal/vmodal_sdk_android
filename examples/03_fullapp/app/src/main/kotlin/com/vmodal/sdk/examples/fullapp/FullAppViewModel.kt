@@ -5,28 +5,37 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.vmodal.sdk.ApiError
+import com.vmodal.sdk.AuthError
 import com.vmodal.sdk.Client
+import com.vmodal.sdk.FeatureDisabled
 import com.vmodal.sdk.MutableApiKeyProvider
 import com.vmodal.sdk.PUBLIC_GATEWAY_URL
 import com.vmodal.sdk.SdkError
+import com.vmodal.sdk.TransportError
 import com.vmodal.sdk.UploadSource
+import com.vmodal.sdk.ValidationFailed
 import com.vmodal.sdk.VideoUploadEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.Base64
 import java.util.Locale
+import java.util.UUID
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
-private const val DEFAULT_COLLECTION = "android_example"
 private const val DEFAULT_STREAM = "astream"
+private const val COLLECTION_PREVIEW_LIMIT = 5
+private const val INDEX_POLL_MS = 5_000L
+private const val INDEX_TIMEOUT_MS = 600_000L
 
 enum class FullAppAction {
-    IDENTITY,
+    CONNECT,
     COLLECTIONS,
     UPLOAD,
     CREATE_INDEX,
@@ -51,7 +60,7 @@ data class FullAppUiState(
     val userType: String = "",
     val collectionsLoaded: Boolean = false,
     val collections: List<String> = emptyList(),
-    val collection: String = DEFAULT_COLLECTION,
+    val collection: String = strNewDemoCollection(),
     val stream: String = DEFAULT_STREAM,
     val query: String = "red",
     val selectedFile: String = "video_10frames.mp4",
@@ -90,6 +99,64 @@ internal data class SearchOutput(
 
 private data class SearchScope(val query: String, val collection: String, val stream: String)
 
+internal fun strNewDemoCollection(): String =
+    "android_demo_${UUID.randomUUID().toString().replace("-", "").take(10)}"
+
+internal fun strCollectionSummary(names: List<String>): String {
+    if (names.isEmpty()) return "No existing video collections. Upload will create the generated collection."
+    val preview = names.take(COLLECTION_PREVIEW_LIMIT).joinToString()
+    val remaining = names.size - COLLECTION_PREVIEW_LIMIT
+    val suffix = if (remaining > 0) " and $remaining more" else ""
+    return "${names.size} existing video collection(s): $preview$suffix. " +
+        "Keep the generated name for an isolated demo, or enter one shown here."
+}
+
+internal fun strIndexDone(status: String): Boolean = status.trim().lowercase() in setOf(
+    "success",
+    "succeeded",
+    "done",
+    "completed",
+    "ok",
+)
+
+internal fun strIndexFailed(status: String): Boolean = status.trim().lowercase() in setOf(
+    "failed",
+    "failure",
+    "error",
+    "cancelled",
+    "canceled",
+    "dead_letter",
+    "timeout",
+    "timed_out",
+    "expired",
+)
+
+internal fun strFullAppError(error: Exception, collection: String): String = when (error) {
+    is AuthError -> "API key rejected${strHttpStatus(error.statusCode)}. Check or replace the key and connect again."
+    is ValidationFailed -> "Invalid input: ${error.message ?: "check the entered values"}."
+    is TransportError -> "Cannot reach VModal. Check the device internet connection and try again."
+    is FeatureDisabled -> "This operation is not available for the configured service."
+    is ApiError -> when {
+        error.statusCode == 404 && strMissingIndex(error.body) ->
+            "No searchable index exists for $collection. Upload a video, create its index, and wait until it is ready."
+        error.statusCode == 404 ->
+            "Collection or resource not found (HTTP 404). Use a collection visible to this API key, or upload to the generated collection."
+        error.statusCode == 429 -> "VModal rate limit reached (HTTP 429). Wait briefly and try again."
+        error.statusCode >= 500 -> "VModal is temporarily unavailable${strHttpStatus(error.statusCode)}. Try again later."
+        else -> "VModal request failed${strHttpStatus(error.statusCode)}. Check the selected scope and try again."
+    }
+    is IllegalArgumentException, is IllegalStateException -> error.message ?: "Operation failed."
+    is SdkError -> "VModal operation failed${strHttpStatus(error.statusCode)}. Try again."
+    else -> "Unexpected ${error::class.simpleName ?: "error"}. Try again."
+}
+
+private fun strHttpStatus(status: Int): String = if (status > 0) " (HTTP $status)" else ""
+
+private fun strMissingIndex(body: Any?): Boolean {
+    val text = body.toString().lowercase()
+    return "missing lancedb" in text || "missing index" in text
+}
+
 class FullAppViewModel private constructor(
     private val repo: FullAppRepository,
     private val sample: UploadSource,
@@ -101,7 +168,7 @@ class FullAppViewModel private constructor(
     private var workGeneration = 0L
     private var searchGeneration = 0L
 
-    fun configure(apiKey: String) {
+    fun connect(apiKey: String) {
         val clean = apiKey.trim()
         if (clean.isBlank()) {
             mutableState.update { it.copy(error = "A runtime API key is required.") }
@@ -109,49 +176,53 @@ class FullAppViewModel private constructor(
         }
         cancelWork()
         searchGeneration++
-        repo.configure(clean)
+        val generation = ++workGeneration
         mutableState.update {
             FullAppUiState(
-                configured = true,
+                action = FullAppAction.CONNECT,
                 collection = it.collection,
                 stream = it.stream,
                 query = it.query,
                 selectedFile = source.fileName,
-                status = "Client configured. Resolve identity to load its collections.",
+                status = "Checking the API key and loading its collections…",
             )
         }
-    }
-
-    fun resolveIdentity() {
-        searchGeneration++
-        mutableState.update(::resetSearch)
-        runAction(FullAppAction.IDENTITY) {
-            val output = repo.resolveIdentity()
-            val current = mutableState.value
-            val selected = if (output.collections.isNotEmpty() && current.collection !in output.collections) {
-                output.collections.first()
-            } else {
-                current.collection
-            }
-            if (selected != current.collection) searchGeneration++
-            mutableState.update { state ->
-                val base = if (selected != state.collection) {
-                    resetScope(state)
-                } else {
-                    state
+        workJob = viewModelScope.launch {
+            try {
+                repo.configure(clean)
+                val output = repo.resolveIdentity()
+                if (generation != workGeneration) return@launch
+                mutableState.update {
+                    it.copy(
+                        action = null,
+                        configured = true,
+                        userType = output.userType,
+                        collectionsLoaded = true,
+                        collections = output.collections,
+                        status = "Connected as ${output.userType}. ${strCollectionSummary(output.collections)}",
+                    )
                 }
-                base.copy(
-                    action = null,
-                    userType = output.userType,
-                    collectionsLoaded = true,
-                    collections = output.collections,
-                    collection = selected,
-                    status = if (output.collections.isEmpty()) {
-                        "Authenticated user type: ${output.userType}. No existing video collections were found; upload to create one."
-                    } else {
-                        "Authenticated user type: ${output.userType}. Loaded ${output.collections.size} video collection(s)."
-                    },
-                )
+            } catch (error: CancellationException) {
+                if (generation == workGeneration) {
+                    repo.clearCredentials()
+                    mutableState.update { it.copy(action = null, configured = false) }
+                }
+                throw error
+            } catch (error: Exception) {
+                if (generation == workGeneration) {
+                    repo.clearCredentials()
+                    mutableState.update {
+                        it.copy(
+                            action = null,
+                            configured = false,
+                            userType = "",
+                            collectionsLoaded = false,
+                            collections = emptyList(),
+                            status = "Connection failed. Correct the problem below and try again.",
+                            error = strFullAppError(error, it.collection),
+                        )
+                    }
+                }
             }
         }
     }
@@ -163,11 +234,7 @@ class FullAppViewModel private constructor(
                 action = null,
                 collectionsLoaded = true,
                 collections = names,
-                status = if (names.isEmpty()) {
-                    "No existing video collections are available for this API key."
-                } else {
-                    "Loaded ${names.size} video collection(s)."
-                },
+                status = strCollectionSummary(names),
             )
         }
     }
@@ -257,34 +324,33 @@ class FullAppViewModel private constructor(
         searchGeneration++
         mutableState.update(::resetSearch)
         runAction(FullAppAction.CREATE_INDEX) {
-            val output = repo.createIndex(state.collection.trim(), state.stream.trim())
-            mutableState.update {
-                it.copy(
-                    action = null,
-                    indexJobId = output.jobId,
-                    indexStatus = output.status.ifBlank { "queued" },
-                    status = "Index job created. Refresh until its status is success.",
-                )
-            }
-        }
-    }
-
-    fun refreshIndex() {
-        val jobId = mutableState.value.indexJobId
-        if (jobId.isBlank()) return showError("Create an index job first.")
-        runAction(FullAppAction.INDEX_STATUS) {
-            val output = repo.indexStatus(jobId)
-            val status = output.status.ifBlank { "unknown" }
-            mutableState.update {
-                it.copy(
-                    action = null,
-                    indexStatus = status,
-                    status = if (strIndexDone(status)) {
-                        "Index is ready. Search the collection next."
-                    } else {
-                        "Index status refreshed: $status."
-                    },
-                )
+            var output = repo.createIndex(state.collection.trim(), state.stream.trim())
+            val jobId = output.jobId
+            check(jobId.isNotBlank()) { "Index creation returned no job ID. Try creating the index again." }
+            val deadline = System.currentTimeMillis() + INDEX_TIMEOUT_MS
+            while (true) {
+                val status = output.status.ifBlank { "queued" }
+                mutableState.update {
+                    it.copy(
+                        action = if (strIndexDone(status)) null else FullAppAction.INDEX_STATUS,
+                        indexJobId = jobId,
+                        indexStatus = status,
+                        status = if (strIndexDone(status)) {
+                            "Index is ready. Search the collection next."
+                        } else {
+                            "Indexing is $status. Waiting automatically…"
+                        },
+                    )
+                }
+                if (strIndexDone(status)) break
+                check(!strIndexFailed(status)) {
+                    "Indexing stopped with status '$status'. Check the collection and stream, then create the index again."
+                }
+                check(System.currentTimeMillis() < deadline) {
+                    "Indexing did not finish within 10 minutes. Create the index again or retry later."
+                }
+                delay(INDEX_POLL_MS)
+                output = repo.indexStatus(jobId)
             }
         }
     }
@@ -325,7 +391,7 @@ class FullAppViewModel private constructor(
     }
 
     private fun runAction(action: FullAppAction, task: suspend () -> Unit) {
-        if (!mutableState.value.configured) return showError("Configure the client first.")
+        if (!mutableState.value.configured) return showError("Connect with a valid API key first.")
         workJob?.cancel()
         val generation = ++workGeneration
         workJob = viewModelScope.launch {
@@ -340,7 +406,11 @@ class FullAppViewModel private constructor(
             } catch (error: Exception) {
                 if (generation == workGeneration) {
                     mutableState.update {
-                        it.copy(action = null, error = strUserError(error, it.collection))
+                        it.copy(
+                            action = null,
+                            status = "Operation stopped. Correct the problem below and try again.",
+                            error = strFullAppError(error, it.collection),
+                        )
                     }
                 }
             }
@@ -413,25 +483,6 @@ class FullAppViewModel private constructor(
             else -> ""
         }
 
-        private fun strIndexDone(status: String): Boolean = status.trim().lowercase() in setOf(
-            "success",
-            "succeeded",
-            "done",
-            "completed",
-            "ok",
-        )
-
-        private fun strUserError(error: Exception, collection: String): String {
-            if (error is ApiError && error.statusCode == 404) {
-                val body = error.body.toString().lowercase()
-                return if ("missing lancedb" in body || "missing index" in body) {
-                    "No searchable index exists for $collection. Upload the video and create its index before searching."
-                } else {
-                    "The configured gateway does not expose the requested resource."
-                }
-            }
-            return if (error is SdkError) error.toString() else error.message ?: "Operation failed."
-        }
     }
 }
 
@@ -489,7 +540,7 @@ internal class FullAppRepository {
                 is VideoUploadEvent.Progress -> onProgress(event.progress.percent)
                 is VideoUploadEvent.Completed -> {
                     check(event.response.uploaded) {
-                        "Upload did not complete: ${event.response.raw}"
+                        "Upload did not complete. Check the selected video and try again."
                     }
                     completed = event.response.fileName.ifBlank { source.fileName }
                 }
@@ -563,7 +614,7 @@ internal class FullAppRepository {
         lastCollections = emptyList()
     }
 
-    private fun requireClient(): Client = requireNotNull(sdk) { "Configure the client first." }
+    private fun requireClient(): Client = requireNotNull(sdk) { "Connect with a valid API key first." }
 
 }
 
@@ -668,6 +719,7 @@ internal fun searchOutput(
     elapsedMs: Double,
 ): SearchOutput = SearchOutput(searchImages(candidates, records), total, returned, elapsedMs)
 
+@OptIn(ExperimentalEncodingApi::class)
 internal fun searchImageBytes(
     images: List<SearchImage>,
     records: List<Map<String, Any?>>,
@@ -680,7 +732,7 @@ internal fun searchImageBytes(
         if (row["found"] == false) return@forEachIndexed
         val encoded = row["content_base64"]?.toString()?.trim().orEmpty()
         if (encoded.isBlank()) return@forEachIndexed
-        val bytes = runCatching { Base64.getDecoder().decode(encoded) }.getOrNull() ?: byteArrayOf()
+        val bytes = runCatching { Base64.Default.decode(encoded) }.getOrNull() ?: byteArrayOf()
         if (bytes.isNotEmpty()) content[inputIndex] = bytes
     }
     return images.mapIndexed { index, image -> image.copy(bytes = content[index] ?: byteArrayOf()) }
