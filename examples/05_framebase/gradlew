@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+app_home=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec "$app_home/../02_search/gradlew" -p "$app_home" "$@"

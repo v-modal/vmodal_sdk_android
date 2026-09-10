@@ -6,8 +6,6 @@
   <h1>V-Modal AI for Android</h1>
   <p><strong>Give your Android app a Visual Memory for video and images</strong></p>
   <p>Upload video. Find moments by image-semantic meaning or imagery.<br>Build the experience in Kotlin, Compose, Views, coroutines, and the Android tools you already know.</p>
-
-
   <img src="https://img.shields.io/badge/Android-native-3DDC84?logo=android&logoColor=white" alt="Android native">
   <img src="https://img.shields.io/badge/Kotlin-1.9%2B-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin 1.9+">
   <img src="https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white" alt="Java 17">
@@ -19,13 +17,7 @@
 
 </div>
 
-<p align="center">
-  <a href="https://trendshift.io/repositories/50668" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/50668/daily" alt="DietrichGebert/ponytail | Trendshift" width="250" height="55"/></a>
-  <a href="https://trendshift.io/repositories/50668" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/50668/weekly" alt="DietrichGebert/ponytail | Trendshift" width="250" height="55"/></a>
-</p>
-
 <br>
-
 
 <img src="assets/dev_homepage.jpg" alt="A wall of searchable video moments and developer screens" width="100%">
 
@@ -209,6 +201,7 @@ network behavior, the supported toolchain, and local validation.
 | Learn one API operation at a time | [Kotlin starter examples](examples/01_starter/) |
 | Build a picker → upload → index → search screen | [Upload and search app](examples/02_search/) |
 | Validate the complete flow stage by stage | [Full search application](examples/03_fullapp/) |
+| Build a local street-video search product flow | [Framebase Compose application](examples/05_framebase/README.md) |
 | Design global, per-user, multi-stream, or catalog indexes | [Index organization examples](examples/04_user/README.md) |
 
 </details>
@@ -263,4 +256,3 @@ Get started today at [www.v-modal.com](https://www.v-modal.com), read the [devel
 
 <!-- Track SDK usage : do not delete -->
 <img src="https://gettrack.link/p/sdk_android" width="1" height="1" alt="" style="display:none" />
-

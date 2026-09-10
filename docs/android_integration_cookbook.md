@@ -8,8 +8,9 @@ calls must never run on Android's main thread.
 > **UI ownership:** VModal is a UI-free client library. Your application owns
 > navigation, state presentation, accessibility, lifecycle collection,
 > theming, and every design-system choice. The
-> [Compose search demo](../examples/02_search/README.md) and
-> [staged full app](../examples/03_fullapp/README.md#fullapp-demo) are downstream
+> [Compose search demo](../examples/02_search/README.md),
+> [staged full app](../examples/03_fullapp/README.md#fullapp-demo), and
+> [Framebase product flow](../examples/05_framebase/README.md) are downstream
 > consumer examples, not reusable UI components or a supported design system.
 
 All complete cookbook sources live in the
