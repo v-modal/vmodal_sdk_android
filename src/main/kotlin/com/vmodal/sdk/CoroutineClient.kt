@@ -103,6 +103,20 @@ class CoroutineSearchesResource internal constructor(
         )
     }
 
+    /** Suspending search with cat5_json field filters such as indexed metadata tags. */
+    suspend fun searchVideo(request: SearchRequest, queryJsonField: Map<String, String>): SearchResponse {
+        request.validate()
+        val data = request.toMap() + ("query_json_field" to queryJsonField)
+        return SearchResponse(
+            http.requestSuspend(
+                "POST",
+                Routes.full(Routes.Endpoints.searchClient),
+                json = data,
+                fallbackDispatcher = fallbackDispatcher,
+            )
+        )
+    }
+
     /** Suspending convenience counterpart of [SearchesResource.searchVideo]. */
     suspend fun searchVideo(
         queryText: String = "",

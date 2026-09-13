@@ -9,6 +9,7 @@ self-contained Gradle project that consumes the published SDK coordinate.
 | [`02_search`](02_search/) | Search over a collection and stream |
 | [`03_fullapp`](03_fullapp/) | End-to-end app flow (upload, index, grid, search) |
 | [`04_user`](04_user/) | Organizing content by project, collection, and stream |
+| [`06_json_metadata`](06_json_metadata/) | JSONL metadata upload, remote indexing, value retrieval, and tag filtering |
 
 The canonical, prose walkthrough of every upload step lives in
 [`../docs/sdk_doc.md`](../docs/sdk_doc.md). This file is the example-oriented quick reference.

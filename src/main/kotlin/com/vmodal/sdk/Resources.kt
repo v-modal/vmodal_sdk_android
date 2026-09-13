@@ -30,6 +30,13 @@ class SearchesResource(private val http: VmodalHttp) {
         return SearchResponse(http.request("POST", Routes.full(Routes.Endpoints.searchClient), json = request.toMap()))
     }
 
+    /** Executes [request] with cat5_json field filters such as indexed metadata tags. */
+    fun searchVideo(request: SearchRequest, queryJsonField: Map<String, String>): SearchResponse {
+        request.validate()
+        val data = request.toMap() + ("query_json_field" to queryJsonField)
+        return SearchResponse(http.request("POST", Routes.full(Routes.Endpoints.searchClient), json = data))
+    }
+
     /** Convenience overload that constructs and validates a [SearchRequest]. */
     fun searchVideo(
         queryText: String = "",

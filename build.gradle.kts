@@ -17,7 +17,7 @@ plugins {
 }
 
 group = "com.vmodal"
-version = "2.0.2"
+version = "2.0.3"
 
 dependencies {
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
