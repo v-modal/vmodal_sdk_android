@@ -145,7 +145,7 @@ away from its collection coordinates.
 
 Call `searchCookbookVideo()` with the ready scope:
 
-- Search is fixed to the supported image-embedding pipeline. OCR/ASR and
+- Search is fixed to the supported image-embedding pipeline. TEXT/AUDIO and
   source-combination selectors are not Android SDK options.
 - `queryMetadata` is a metadata filter, while `startDate`/`endDate` bound dates.
   Keep them separate from the natural-language query.

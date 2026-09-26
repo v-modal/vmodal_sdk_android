@@ -336,7 +336,7 @@ when the query needs more than the convenience overload. The sample combines:
 - text query `forklift`;
 - metadata equality for `site=warehouse-a`;
 - video-file mode and a specific group;
-- OCR, ASR, and visual-image search signals;
+- TEXT, AUDIO, and visual-image search signals;
 - union combination behavior;
 - an inclusive date window supplied as ISO-style date strings;
 - a minimum text-embedding score;

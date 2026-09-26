@@ -46,7 +46,7 @@ manifest, or a deep link.
    stream; `indexStatus()` is polled until a terminal state is visible.
 5. `listGroups("vid_file")` confirms that the collection belongs to the
    authenticated key and supplies its latest advertised LanceDB version.
-6. `searchVideo()` sends that version and retrieves matching OCR, ASR, and
+6. `searchVideo()` sends that version and retrieves matching TEXT, AUDIO, and
    visual records.
 7. Each hit is converted to the image-coordinate contract used by the Python
    reference SDK: mode, group, stream, filename, and optional 13-digit time.

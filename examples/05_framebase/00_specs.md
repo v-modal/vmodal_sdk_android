@@ -44,7 +44,7 @@ The Android app must implement the complete Framebase workflow:
 - No Clerk UI, account registration, billing, collection picker, or arbitrary
   collection/stream configuration.
 - No remote delete, local video delete, remote playback, background upload,
-  WorkManager retry, pagination, audio/ASR search, OCR search, or image-query
+  WorkManager retry, pagination, audio/AUDIO search, TEXT search, or image-query
   search.
 - No API key, signed URL, search response, or downloaded image-byte persistence.
 - No visual redesign of Framebase and no reuse of the staged form UI from
