@@ -36,21 +36,24 @@ caches. Only a successful push to `dev` may write the Gradle action cache.
 
 ## Credential boundaries
 
-Configure separate credentials; never reuse one credential across boundaries:
+The release steps call `ga_infisical_load` in `ga_release.sh`, which reuses
+`.github/workflows/utils.sh` to fetch only the keys needed by each job and write
+them to `GITHUB_ENV`. Set `INFISICAL_TOKEN` (or the compatibility
+`INFISICAL_API_KEY`) in GitHub Actions secrets.
 
-- `ANDROID_SDK_APP_ID` and `ANDROID_SDK_APP_PRIVATE_KEY`: a GitHub App installed
-  only on `v-modal/vmodal_sdk_android`, with `contents: write` only. The workflow
-  creates its short-lived token after the exported source passes inspection.
-- `GH_PACKAGES_TOKEN`: package publication only, with no source-repository write
-  access. Rotate it on the package-token schedule.
+- `GH_TOKEN`: Infisical token value used to push the public source/tag and
+  generated documentation to `v-modal/vmodal_sdk_android`.
+- `GH_PACKAGES_TOKEN`: Infisical package publication credential; the current
+  workflow falls back to `GH_TOKEN` when this key is missing or empty.
 - `MAVEN_CENTRAL_USERNAME` and `MAVEN_CENTRAL_PASSWORD`: Central Portal token.
-- `MAVEN_SIGNING_KEY` and `MAVEN_SIGNING_PASSWORD`: in-memory artifact signing.
+- `MAVEN_SIGNING_KEY`: armored signing key kept in GitHub Actions secrets;
+  `MAVEN_SIGNING_PASSWORD`: signing password loaded from Infisical.
 - `TEST_CLIENT_CLERK_USER_API_TOKEN`: live-test bearer credential only. This
   compatibility secret name does not describe or select the active auth
   provider.
 
-The variable names are centralized in the sub-repository `env.sh`; it contains
-no credential values. Production values remain GitHub environment secrets.
+The sub-repository `env.sh` contains no credential values. The credential
+loader masks exported values in Actions logs and discards its Infisical payload.
 
 The workflow has `contents: read` by default, uses `persist-credentials: false`
 for every checkout, and introduces each release credential only in its final
@@ -84,7 +87,6 @@ first production release):
 | `gradle/actions/setup-gradle` | v4 | `ed408507eac070d1f99cc633dbcf757c94c7933a` |
 | `actions/upload-artifact` | v4 | `ea165f8d65b6e75b540449e92b4886f43607fa02` |
 | `actions/download-artifact` | v4 | `d3f86a106a0bac45b974a628896c90dbdf5c8093` |
-| `actions/create-github-app-token` | v2 | `fee1f7d63c2ff003460e3d139729b119787bc349` |
 
 `secret_detection` checks out exactly `${{ github.sha }}` with depth 1 and
 persisted credentials disabled. It scans only the checked-out
